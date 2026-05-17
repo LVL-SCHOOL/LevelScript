@@ -300,6 +300,9 @@ def _build_rpn(expr: list[str]) -> list[Union[Operator, BaseAtomicType]]:
                 next_op = expr[offset + 1]
 
                 if next_op == Tokens.left_bracket:
+                    if not is_identifier(op):
+                        raise InvalidExpression(f"Некорректное имя '{op}' для контекста вызова процедуры\n")
+
                     stack.append(ProcedureContextName(Operator(op)))
                     printer.logging(f"Функция '{op}' добавлена в стек, так как за ней следует открывающая скобка",
                                     level="INFO")
