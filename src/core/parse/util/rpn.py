@@ -398,8 +398,6 @@ def _build_rpn(expr: list[str]) -> list[Union[Operator, BaseAtomicType]]:
                             len_path_to_err = len(' '.join(str(i) for i in expr[:offset_ + 1]))
                             res_expr = ' '.join(str(i) for i in expr)
 
-                            print(previous_tok, token_, expr[offset:], offset_)
-
                             raise InvalidExpression(
                                 f"В выражении: '{' '.join(str(i) for i in expr)}' не хватает запятой: '{Tokens.comma}' "
                                 f"между операндами: '{previous_tok}' и '{token_}'\n\n"
