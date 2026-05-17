@@ -32,10 +32,9 @@ _DEFAULT_LEFT_BRACKET: Final[int] = 1
 
 
 class MultiExpressionParser(Parser):
-    left_bracket = _DEFAULT_LEFT_BRACKET
-
-    def __init__(self):
+    def __init__(self, left_bracket=_DEFAULT_LEFT_BRACKET):
         super().__init__()
+        self.left_bracket = left_bracket
         self.info = None
         self.expressions: list[str] = []
         printer.logging("Инициализация MultiExpressionParser", level="INFO")
@@ -108,13 +107,12 @@ class MultiExpressionParser(Parser):
                     left_bracket += 1
 
                 if right_bracket == left_bracket:
-                    # TODO: Подумать, как сделать более красиво
-                    if offset + 2 < len(line):
+                    if offset + 1 < len(line) and line[offset+1] not in [Tokens.end_expr, Tokens.comma]:
                         expr = " ".join(line)
-                        arrow = " " * (offset + 3) + "^"
+                        arrow = " " * ((right_bracket * 2) - 2)  + "^"
 
                         raise InvalidSyntaxError(
-                            msg=f"Некорректный символ после закрытой скобки: \n\n{expr}\n{arrow}\n\n",
+                            msg=f"Некорректный символ после закрытой скобки: \n\n{expr}\n{arrow}",
                             line=line, info=self.info
                         )
 
@@ -126,4 +124,8 @@ class MultiExpressionParser(Parser):
                 self.clean_comma()
 
         if right_bracket != left_bracket:
-            raise InvalidSyntaxError(info=self.info)
+            raise InvalidSyntaxError(
+                msg=f"Количество '{Tokens.left_bracket}' и '{Tokens.right_bracket}' "
+                    f"неравно внутри многострочного выражения",
+                info=self.info
+            )

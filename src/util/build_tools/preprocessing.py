@@ -131,7 +131,7 @@ class Preprocessor:
                     continue
 
                 for offset_, expr in enumerate(exprs):
-                    if not expr:
+                    if not expr or not expr.replace(" ", ""):
                         continue
 
                     end = ""
