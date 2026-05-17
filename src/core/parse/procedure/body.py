@@ -406,8 +406,8 @@ class BodyParser(Parser):
 
                     self.commands.append(block)
                     printer.logging(f"Добавлена команда BlockSync", level="INFO")
-                case [*expr, Tokens.left_bracket]:
-                    expr = [*expr, Tokens.left_bracket]
+                case [*expr, last] if last in (Tokens.left_bracket, Tokens.comma):
+                    expr = [*expr, last]
 
                     if Tokens.equal in expr:
                         self.parse_assign_override(expr, line, body, num)

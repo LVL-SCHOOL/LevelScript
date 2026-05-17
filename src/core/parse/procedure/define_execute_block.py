@@ -90,8 +90,9 @@ class DefineExecuteBlockParser(BodyParser):
                         level="INFO"
                     )
 
-                case [*expr, Tokens.left_bracket]:
-                    expr = [*expr, Tokens.left_bracket]
+                case [*expr, last] if last in (Tokens.left_bracket, Tokens.comma):
+                    expr = [*expr, last]
+
                     MultiExpressionParser.init_left_bracket(expr)
 
                     res_expr = self.execute_parse(MultiExpressionParser, body, self.next_num_line(num))

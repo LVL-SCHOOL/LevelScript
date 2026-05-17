@@ -10,14 +10,16 @@ from src.core.types.line import Line, Info
 
 _INTEGER_PATTERN = re.compile(r"^-?\d+$")
 _FLOAT_PATTERN = re.compile(r"^-?\d+(\.\d+)?$")
-_IDENTIFIER_PATTERN = re.compile(r"^[А-Яа-яЁёA-Za-z_][А-Яа-яЁёA-Za-z0-9_]*$")
+_IDENTIFIER_PATTERN = re.compile(r"^[А-Яа-яЁёA-Za-z_][А-Яа-яЁёA-Za-z0-9_]*(?::[А-Яа-яЁёA-Za-z_][А-Яа-яЁёA-Za-z0-9_]*)*$")
 
 
 def is_integer(s: str) -> bool:
     return bool(_INTEGER_PATTERN.match(str(s)))
 
+
 def is_float(s: str) -> bool:
     return bool(_FLOAT_PATTERN.match(str(s)))
+
 
 def is_identifier(s: str) -> bool:
     return bool(_IDENTIFIER_PATTERN.match(str(s)))
@@ -94,7 +96,7 @@ class Parser(ABC):
         if raw_data.endswith(Tokens.left_bracket):
             return
 
-        if not raw_data.endswith(Tokens.end_expr):
+        if not raw_data.endswith((Tokens.end_expr, Tokens.comma)):
             line.raw_data = raw_data + Tokens.end_expr
 
     def separate_line_to_token(self, line: Line) -> list[str]:
