@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from src.core.extend.function_wrap import PyExtendWrapper, PyExtendBuilder
+from src.core.types.atomic import String
 from src.core.types.basetype import BaseAtomicType
 
 builder = PyExtendBuilder()
@@ -16,6 +17,7 @@ class Print(PyExtendWrapper):
         self.empty_args = False
         self.count_args = 3
         self.offset_required_args = 1
+        self.signature = (BaseAtomicType, String, String)
         self.replace_map = {
             "\\n": "\n",      # Новая строка
             "\\t": "\t",      # Табуляция
@@ -73,8 +75,7 @@ class ReadFile(PyExtendWrapper):
         self.count_args = 1
 
     def call(self, args: Optional[list[BaseAtomicType]] = None):
-        import os
-        from config import script_dir_storage
+        from src.core.extend.standard_lib.util import path_normpath
         from src.core.types.atomic import String, Array
         from src.core.exceptions import ErrorValue, FileError
 
@@ -86,12 +87,7 @@ class ReadFile(PyExtendWrapper):
         path = self.parse_args(args)[0]
         lines = []
 
-        # Формируем полный путь относительно рабочей директории
-        # Если путь абсолютный, os.path.join корректно его обработает
-        full_path = os.path.join(script_dir_storage.LW_SCRIPT_DIR, path)
-
-        # Нормализуем путь (убираем ../, ./ и т.д.)
-        full_path = os.path.normpath(full_path)
+        full_path = path_normpath(path)
 
         try:
             with open(full_path, 'r', encoding='utf-8') as f:

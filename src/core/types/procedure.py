@@ -14,13 +14,21 @@ class Procedure(CodeBlock):
 
     def __init__(
             self, name: str, body: Body,
-            arguments_names: list[Optional[str]], default_arguments: Optional[dict[str, 'Expression']] = None
+            arguments_names: list[Optional[str]], default_arguments: Optional[dict[str, 'Expression']] = None,
+            inf_args_name: Optional[str] = None, is_inf_args: bool = False
     ):
         super().__init__(name, body)
 
         self.arguments_names = arguments_names
         self.default_arguments = default_arguments
+        self.default_arguments = default_arguments
+        self.inf_args_name = inf_args_name
+        self.is_inf_args = is_inf_args
         self.tree_variables: Optional[ScopeStack] = None
+
+    @classmethod
+    def type_name(cls):
+        return "Процедура"
 
     def __str__(self):
         return f"Процедура('{self.name}') кол-во аргументов: {len(self.arguments_names)}"
@@ -137,6 +145,15 @@ class When(CodeBlock):
 
 
 class Return(BaseType):
+    __slots__ = ('expression',)
+
+    def __init__(self, name: str, expression: Expression):
+        super().__init__(name)
+
+        self.expression = expression
+
+
+class Defer(BaseType):
     __slots__ = ('expression',)
 
     def __init__(self, name: str, expression: Expression):

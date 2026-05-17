@@ -13,20 +13,23 @@ from src.util.console_worker import printer
 class DefineProcedureMetaObject(MetaObject):
     def __init__(
             self, stop_num: int, name: str, body: Optional[MetaObject],
-            arguments_name: list[Optional[str]], info: Info, default_arguments: Optional[dict[str, Expression]]
+            arguments_name: list[Optional[str]], inf_args_name: Optional[str], is_inf_args: bool,
+            info: Info, default_arguments: Optional[dict[str, Expression]]
     ):
         super().__init__(stop_num)
         self.name = name
         self.body = body
         self.arguments_name = arguments_name
         self.default_arguments = default_arguments
+        self.inf_args_name = inf_args_name
+        self.is_inf_args = is_inf_args
         self.info = info
 
     def create_image(self) -> Image:
         return Image(
             name=self.name,
             obj=Procedure,
-            image_args=(self.body, self.arguments_name, self.default_arguments),
+            image_args=(self.body, self.arguments_name, self.default_arguments, self.inf_args_name, self.is_inf_args),
             info=self.info
         )
 
@@ -38,6 +41,8 @@ class DefineProcedureParser(Parser):
         self.name: Optional[str] = None
         self.arguments_name: list[Optional[str]] = []
         self.default_arguments: Optional[dict[str, Expression]] = None
+        self.inf_args_name: Optional[str] = None
+        self.is_inf_args: bool = False
         self.body: Optional[MetaObject] = None
         printer.logging("Инициализация DefineProcedureParser", level="INFO")
 
@@ -51,11 +56,29 @@ class DefineProcedureParser(Parser):
             body=self.body,
             arguments_name=self.arguments_name,
             default_arguments=self.default_arguments,
+            inf_args_name=self.inf_args_name,
+            is_inf_args=self.is_inf_args,
             info=self.info
         )
 
     def parse_args(self, arguments, info_line: Info) -> None:
         printer.logging(f"Начало парсинга аргументов: {arguments}", level="DEBUG")
+
+        if not arguments:
+            return
+
+        first_arg = arguments[0]
+
+        if first_arg.endswith(Tokens.triple_dot) and len(arguments) == 1:
+            first_arg = first_arg[:first_arg.rfind(Tokens.triple_dot)]
+            if not is_identifier(first_arg):
+                raise InvalidSyntaxError(
+                    msg=f"Некорректное название цели для переменного числа аргументов: '{first_arg}'",
+                    info=info_line
+                )
+            self.is_inf_args = True
+            self.inf_args_name = first_arg
+            return
 
         required_arguments = []
         default_arguments = []
@@ -71,10 +94,14 @@ class DefineProcedureParser(Parser):
                 required_arguments.pop(-1)
                 default = arguments[offset - 1:]
                 printer.logging(f"Выделена часть для обработки значений по умолчанию: {default}", level="DEBUG")
+                is_string = False
 
                 for default_offset, default_argument_token in enumerate(default):
                     printer.logging(f"Обработка default токена [{default_offset}]: '{default_argument_token}'",
                                     level="DEBUG")
+
+                    if default_argument_token == Tokens.quotation:
+                        is_string = not is_string
 
                     if default_argument_token == Tokens.equal and default_offset > 0:
                         name = default[default_offset - 1]
@@ -98,7 +125,7 @@ class DefineProcedureParser(Parser):
                             next_tok = default[default_offset + 1]
                             sep = ""
 
-                            if next_tok == " " or next_tok in Tokens:
+                            if next_tok == " " or next_tok in Tokens and not is_string:
                                 sep = " "
 
                             default_arguments_expressions[-1] += sep
@@ -184,14 +211,18 @@ class DefineProcedureParser(Parser):
             printer.logging(f"Финальный список аргументов: {self.arguments_name}", level="INFO")
 
     def parse_define_procedure(self, body: list[Line], name: str, arguments: list[str], num, info_line: Info) -> None:
+        if not is_identifier(name):
+            raise InvalidSyntaxError(f"Имя процедуры имеет некорректное значение: '{name}'", info=info_line)
+
         self.parse_args(arguments, info_line)
 
-        for arg in self.arguments_name:
-            if arg in NOT_ALLOWED_TOKENS or not is_identifier(arg):
-                raise InvalidSyntaxError(
-                    f"Неверный синтаксис. Нельзя использовать операторы в объявлениях аргументов: {arg}",
-                    info=info_line
-                )
+        if not self.is_inf_args:
+            for arg in self.arguments_name:
+                if arg in NOT_ALLOWED_TOKENS or not is_identifier(arg):
+                    raise InvalidSyntaxError(
+                        f"Неверный синтаксис. Нельзя использовать операторы в объявлениях аргументов: '{arg}'",
+                        info=info_line
+                    )
 
         self.name = name
         self.body = self.execute_parse(BodyParser, body, self.next_num_line(num))

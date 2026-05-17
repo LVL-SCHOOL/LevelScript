@@ -20,6 +20,8 @@ class Tokens(StrEnum):
     attr_access = ":"
     quotation = "\""
     slash = "\\"
+    spec_type = "<Спец. тип>"
+    triple_dot = "..."
 
     define = "ОПРЕДЕЛИТЬ"
     print_ = "НАПЕЧАТАТЬ"
@@ -58,6 +60,8 @@ class Tokens(StrEnum):
     and_ = "И"
     or_ = "ИЛИ"
     bool_equal = "РАВНО"
+    bool_equal_1 = "РАВЕН"
+    bool_equal_2 = "РАВНЫ"
     bool_not_equal = "НЕРАВНО"
     less = "МЕНЬШЕ"
     greater = "БОЛЬШЕ"
@@ -95,6 +99,8 @@ class Tokens(StrEnum):
     as_ = "КАК"
     blocking = "БЛОКИРОВАТЬ"
     error = "ОШИБКА"
+    defer = "ОТЛОЖИТЬ"
+    defer_1 = "ОТЛОЖЕННО"
 
 
 class ServiceTokens(StrEnum):
@@ -114,3 +120,8 @@ NOT_ALLOWED_TOKENS = set(Tokens) - {
     Tokens.bool_equal, Tokens.bool_not_equal, Tokens.less, Tokens.greater, Tokens.true, Tokens.false,
     Tokens.in_, Tokens.background, Tokens.wait, Tokens.attr_access, Tokens.void
 }
+ALIASES_MAP = {
+    Tokens.bool_equal: [Tokens.bool_equal_1, Tokens.bool_equal_2],
+    Tokens.defer: [Tokens.defer_1],
+}
+END_LINE_TOKENS = (Tokens.left_bracket, Tokens.right_bracket, Tokens.comma, Tokens.end_expr)

@@ -83,7 +83,6 @@ def create_define_class_wrap(exception: Type['BaseError']) -> 'ClassExceptionDef
     return cls
 
 
-
 def get_probable_tokens(word: str, sequence: Optional[Iterable[str]] = Tokens, threshold=0.6):
     """Возвращает вероятные токены с учётом опечаток и регистра."""
     word = word.upper()  # Нормализуем регистр
@@ -123,7 +122,7 @@ class BaseError(Exception):
             msg = f"{msg} Строка: '{" ".join(line)}'"
 
         if info is not None:
-            msg = f"{msg} Файл: {info.file}, Номер строки: {info.num}, Строка: {info.raw_line}"
+            msg = f"{msg}\n\nФайл: {info.file}, Номер строки: {info.num}, Строка: {info.raw_line}"
 
         self.msg = msg
         self.line = line
@@ -522,5 +521,20 @@ class FileError(BaseError):
 
         if path is not None:
             msg = f"{msg}: Путь не существует '{path}'"
+
+        super().__init__(msg, info=info)
+
+
+@_add_ex
+class OperationError(BaseError):
+    exc_name = "ОшибкаОперации"
+
+    def __init__(self, operation: Optional[str] = None, type_: Optional[str] = None, info: Optional[Info] = None):
+        msg = "Ошибка операции"
+        self.operation = operation
+        self.type = type_
+
+        if operation is not None and type_ is not None:
+            msg = f"Операция '{operation}' не поддерживается для типа: '{type_}'"
 
         super().__init__(msg, info=info)

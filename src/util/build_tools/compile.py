@@ -1,5 +1,8 @@
 from typing import Type, Union
 
+from click import command
+
+from config import settings
 from src.core.exceptions import (
     NameNotDefine,
     InvalidType,
@@ -7,7 +10,7 @@ from src.core.exceptions import (
     NameAlreadyExist,
     FieldNotDefine,
     InvalidSyntaxError,
-    ErrorType, EXCEPTIONS, create_define_class_wrap, BaseError, is_def_err,
+    ErrorType, EXCEPTIONS, create_define_class_wrap, is_def_err,
 )
 from src.core.extend.function_wrap import PyExtendWrapper
 from src.core.parse.base import MetaObject
@@ -43,7 +46,9 @@ from src.core.types.procedure import (
     AssignOverrideVariable,
     When,
     While,
-    Context, ErrorThrow
+    Context,
+    ErrorThrow,
+    Defer
 )
 from src.core.types.rules import Rule
 from src.core.types.sanction_types import SanctionType
@@ -138,7 +143,24 @@ class Compiler:
                 )
 
             elif isinstance(statement, CodeBlock):
-                self.check_code_body(statement.body)
+                if isinstance(statement, When):
+                    self.check_code_body(statement.body)
+
+                    if statement.else_whens is not None:
+                        for else_when in statement.else_whens:
+                            self.check_code_body(else_when.body)
+
+                    if statement.else_ is not None:
+                        self.check_code_body(statement.else_.body)
+
+                elif isinstance(statement, Context):
+                    self.check_code_body(statement.body)
+
+                    for handler in statement.handlers:
+                        self.check_code_body(handler.body)
+
+                else:
+                    self.check_code_body(statement.body)
 
     def compile_procedure(self, compiled_obj: Union[Procedure, Method, Constructor]) -> Union[Procedure, Method, Constructor]:
         self.check_code_body(compiled_obj.body)
@@ -197,7 +219,7 @@ class Compiler:
             return meta
 
         if not isinstance(meta, MetaObject):
-            printer.logging("Объект не является метаданными, возвращаем его", level="INFO")
+            printer.logging("Объект не является MetaObject, возвращаем его", level="INFO")
             return meta
 
         compiled_obj = meta.create_image().build()
@@ -212,13 +234,6 @@ class Compiler:
         if isinstance(compiled_obj, ExecuteBlock):
             for expression in compiled_obj.expressions:
                 self.expr_compile(expression, [])
-
-                for op in expression.operations:
-                    if isinstance(op, Operator) and op.operator == Tokens.wait:
-                        raise InvalidSyntaxError(
-                            f"Оператор '{Tokens.wait}' не разрешен в блоке '{Tokens.execute}'",
-                            info=expression.meta_info
-                        )
 
             return compiled_obj
 
@@ -310,9 +325,13 @@ class Compiler:
                 compiled_obj.parent = self.compiled[compiled_obj.parent]
 
             if compiled_obj.constructor is None:
-                raise InvalidSyntaxError(
-                    f"У класса '{compiled_obj.name}' не определен конструктор!",
-                    info=compiled_obj.meta_info
+                compiled_obj.constructor = Constructor(
+                    str(),
+                    body=Body(
+                        str(),
+                        commands=[]
+                    ),
+                    arguments_names=[]
                 )
 
             return compiled_obj
@@ -530,6 +549,10 @@ class Compiler:
                 printer.logging("Компиляция Return выражения", level="DEBUG")
                 self.expr_compile(statement.expression, statements)
 
+            elif isinstance(statement, Defer):
+                printer.logging("Компиляция Defer выражения", level="DEBUG")
+                self.expr_compile(statement.expression, statements)
+
             elif isinstance(statement, ErrorThrow):
                 printer.logging("Компиляция ErrorThrow выражения", level="DEBUG")
                 self.expr_compile(statement.expression, statements)
@@ -546,6 +569,30 @@ class Compiler:
     def compile_default_args(self, default_arguments: dict[str, Expression]):
         for expr in default_arguments.values():
             self.expr_compile(expr)
+
+    def check_constructor_return(self, body: Body, class_definition_name: str):
+        for cmd in body.commands:
+            if isinstance(cmd, Return) and cmd.expression.operations:
+                raise InvalidSyntaxError(
+                    f"Конструктор класса '{class_definition_name}' "
+                    f"не может содержать '{Tokens.return_}' со значением",
+                    info=cmd.expression.meta_info
+                )
+
+            if isinstance(cmd, CodeBlock):
+                self.check_constructor_return(cmd.body, class_definition_name)
+
+                if isinstance(cmd, Context):
+                    for handler in cmd.handlers:
+                        self.check_constructor_return(handler.body, class_definition_name)
+
+                if isinstance(cmd, When):
+                    if cmd.else_whens is not None:
+                        for else_when in cmd.else_whens:
+                            self.check_constructor_return(else_when.body, class_definition_name)
+
+                    if cmd.else_ is not None:
+                        self.check_constructor_return(cmd.else_.body, class_definition_name)
 
     def compile(self) -> Compiled:
         compiled_modules = {}
@@ -564,7 +611,7 @@ class Compiler:
 
             printer.logging(f"Команда компиляции №{idx + 1}", level="INFO")
 
-            if compiled.name in self.compiled:
+            if compiled.name in self.compiled and not settings.force_overwrite_module:
                 printer.logging(f"Ошибка: {compiled.name} уже существует", level="ERROR")
                 raise NameAlreadyExist(compiled.name, info=compiled.meta_info)
 
@@ -574,7 +621,7 @@ class Compiler:
         compiled_without_build_modules = self.compiled
         self.compiled = {**compiled_modules, **self.compiled}
 
-        for name, compiled in compiled_without_build_modules.items():
+        for compiled in compiled_without_build_modules.values():
             if isinstance(compiled, Procedure):
                 self.body_compile(compiled.body)
 
@@ -598,11 +645,6 @@ class Compiler:
                 if compiled.constructor.default_arguments is not None:
                     self.compile_default_args(compiled.constructor.default_arguments)
 
-                for cmd in compiled.constructor.body.commands:
-                    if isinstance(cmd, Return):
-                        raise InvalidSyntaxError(
-                            f"Конструктор класса '{compiled.name}' не может содержать '{Tokens.return_}'",
-                            info=cmd.expression.meta_info
-                        )
+                self.check_constructor_return(compiled.constructor.body, compiled.name)
 
         return Compiled(self.compiled)

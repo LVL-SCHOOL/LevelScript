@@ -25,6 +25,19 @@ class Time(PyExtendWrapper):
         return Number(time.time())
 
 
+@builder.collect(func_name='точная_временная_метка')
+class PreciseTime(PyExtendWrapper):
+    def __init__(self, func_name: str):
+        super().__init__(func_name)
+        self.empty_args = True
+        self.count_args = 0
+
+    def call(self, args: Optional[list[BaseAtomicType]] = None):
+        from src.core.types.atomic import Number
+
+        return Number(time.perf_counter())
+
+
 @builder.collect(func_name='спать')
 class Sleep(PyExtendWrapper):
     def __init__(self, func_name: str):
@@ -45,7 +58,7 @@ class Sleep(PyExtendWrapper):
         return VOID
 
 
-@builder.collect(func_name='спать_в_фоне')
+@builder.collect(func_name='асинхронный_сон')
 class BackgroundSleep(PyExtendWrapper):
     def __init__(self, func_name: str):
         super().__init__(func_name)
@@ -70,12 +83,19 @@ class BackgroundSleep(PyExtendWrapper):
                 self._done = False
                 self._lock = Lock()
                 self._gen_sleep = self.sleep()
+                self._delta_sleep_time = 0.0001
+                self._switch_point = 100
                 super().__init__(name, self.sleep_time)
 
             def sleep(self):
-                start_time = time.time()
+                start_time = time.monotonic()
+                switch = 0
 
-                while time.time() - start_time < self.sleep_time:
+                while time.monotonic() - start_time < self.sleep_time:
+                    if switch >= self._switch_point:
+                        time.sleep(self._delta_sleep_time)
+                        switch = 0
+
                     yield YIELD
 
                 return VOID
@@ -106,6 +126,32 @@ class BackgroundSleep(PyExtendWrapper):
                     self._result = value
 
         return SleepTask()
+
+
+@builder.collect(func_name='замерить_время')
+class MeasureTime(PyExtendWrapper):
+    def __init__(self, func_name: str):
+        super().__init__(func_name)
+        self.empty_args = False
+        self.count_args = -1
+
+    def call(self, args: Optional[list[BaseAtomicType]] = None):
+        from src.core.types.atomic import Number
+        from src.core.types.procedure import Procedure
+        from src.core.exceptions import ErrorType
+
+        procedure = args[0]
+
+        if not isinstance(procedure, Procedure):
+            raise ErrorType('Аргумент должен быть процедурой')
+
+        self.parse_args(args[1:])
+
+        start = time.perf_counter()
+        self.run_procedure(procedure, args[1:])
+        end = time.perf_counter()
+
+        return Number(end - start)
 
 
 def build_module():

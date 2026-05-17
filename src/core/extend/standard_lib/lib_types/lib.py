@@ -5,8 +5,8 @@ from src.core.extend.function_wrap import PyExtendWrapper, PyExtendBuilder
 from src.core.types.basetype import BaseAtomicType
 
 builder = PyExtendBuilder()
-standard_lib_path = f"{Path(__file__).resolve().parent.parent}/modules/"
-MOD_NAME = "типы"
+standard_lib_path = f"{Path(__file__).resolve().parent.parent}/modules/_/"
+MOD_NAME = "types"
 
 
 @builder.collect(func_name='получить_тип')
@@ -34,6 +34,23 @@ class GetType(PyExtendWrapper):
             return String(arg.__class__.type_name())
 
         raise ErrorType(f"Аргумент: '{arg}' имеет неизвестный тип!")
+
+
+@builder.collect(func_name='это_процедура')
+class GetType(PyExtendWrapper):
+    def __init__(self, func_name: str):
+        super().__init__(func_name)
+        self.empty_args = False
+        self.count_args = 1
+
+    def call(self, args: Optional[list[BaseAtomicType]] = None):
+        from src.core.types.atomic import Boolean
+        from src.core.types.procedure import Procedure, LinkedProcedure
+        from src.core.extend.function_wrap import PyExtendWrapper
+
+        arg = args[0]
+
+        return Boolean(isinstance(arg, (Procedure, LinkedProcedure, PyExtendWrapper)))
 
 
 def build_module():

@@ -132,8 +132,10 @@ def check_correct_expr(expr: list[str]):
 
         if op not in allowed_ops:
             if not is_integer(op) and not is_float(op) and not is_identifier(op):
+                res_expr = " ".join(str(i) for i in expr)
                 raise InvalidExpression(
-                    f"В выражении: '{' '.join(str(item) for item in expr)}' не может быть оператора: '{op}'"
+                    f"В выражении: '{res_expr}' не может быть оператора: '{op}'\n"
+                    f"\n{res_expr}\n{" " * (sum(len(t) for o, t in enumerate(res_expr) if o < res_expr.index(op)))}^\n"
                 )
 
     count_double_comma = 0
@@ -298,6 +300,9 @@ def _build_rpn(expr: list[str]) -> list[Union[Operator, BaseAtomicType]]:
                 next_op = expr[offset + 1]
 
                 if next_op == Tokens.left_bracket:
+                    if not is_identifier(op):
+                        raise InvalidExpression(f"Некорректное имя '{op}' для контекста вызова процедуры\n")
+
                     stack.append(ProcedureContextName(Operator(op)))
                     printer.logging(f"Функция '{op}' добавлена в стек, так как за ней следует открывающая скобка",
                                     level="INFO")
@@ -317,15 +322,15 @@ def _build_rpn(expr: list[str]) -> list[Union[Operator, BaseAtomicType]]:
 
                 dont_repeat_flag = False
                 unary_ops = {ServiceTokens.in_background, Tokens.wait}
+                sub_expr = expr[offset:]
 
-                for offset_, token_ in enumerate(expr[offset:]):
+                for offset_, token_ in enumerate(sub_expr):
                     printer.logging(
                         f"Проверка токена '{token_}' на позиции {offset_} относительно скобки",
                         level="DEBUG"
                     )
 
                     if token_ == Tokens.right_bracket:
-                        sub_expr = expr[offset:]
                         previous_tok = sub_expr[offset_ - 1]
 
                         if previous_tok == Tokens.comma:
@@ -350,7 +355,8 @@ def _build_rpn(expr: list[str]) -> list[Union[Operator, BaseAtomicType]]:
                         is_identifier(token_),
                         is_float(token_),
                         is_integer(token_),
-                        isinstance(token_, BaseAtomicType)
+                        isinstance(token_, BaseAtomicType),
+                        isinstance(token_, AttrAccess),
                     )
                     ignores = (
                         token_ in {
@@ -361,7 +367,7 @@ def _build_rpn(expr: list[str]) -> list[Union[Operator, BaseAtomicType]]:
                     )
 
                     if any(conditions) and not any(ignores):
-                        previous_tok = expr[offset_]
+                        previous_tok = sub_expr[offset_ - 1]
 
                         printer.logging(
                             f"Токен '{token_}' является операндом. Предыдущий токен: '{previous_tok}'",
@@ -388,7 +394,6 @@ def _build_rpn(expr: list[str]) -> list[Union[Operator, BaseAtomicType]]:
 
                             if token_ == ServiceTokens.in_background:
                                 token_ = f"{Tokens.in_} {Tokens.background}"
-
 
                             len_path_to_err = len(' '.join(str(i) for i in expr[:offset_ + 1]))
                             res_expr = ' '.join(str(i) for i in expr)

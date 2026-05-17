@@ -24,6 +24,5 @@ class CheckerSituation(BaseDeclarativeType):
             compiled=compiled
         )
 
-
     def __repr__(self) -> str:
         return f"{CheckerSituation.__name__}(__документ__={self.document}, __фактическая_ситуация__={self.fact_situation})"
