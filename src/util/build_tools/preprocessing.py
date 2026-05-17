@@ -45,6 +45,24 @@ def import_preprocess(path, byte_mode: Optional[bool] = True) -> Union[Compiled,
         raise e
 
 
+def delete_end_expr_for_include_directive(directive: list[str]):
+    if not directive:
+        return directive
+
+    first_token, last_token = directive[0], directive[-1]
+
+    if not first_token.startswith(Tokens.include):
+        return directive
+
+    if Tokens.end_expr in last_token:
+        index_end_expr = last_token.find(Tokens.end_expr)
+        directive[-1] = last_token[:index_end_expr]
+
+        return directive
+
+    return directive
+
+
 class Preprocessor:
     def __init__(self):
         self.imports = set()
@@ -138,7 +156,9 @@ class Preprocessor:
         preprocessed = []
 
         for offset, line in enumerate(code):
-            match line.split(" "):
+            separate_line = delete_end_expr_for_include_directive(line.split(" "))
+
+            match separate_line:
                 case [Tokens.include, package] if package.endswith(Tokens.star):
                     is_std_path = _is_std(package)
                     package = _standard_lib_alias(package)
