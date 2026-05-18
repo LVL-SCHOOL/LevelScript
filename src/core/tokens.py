@@ -62,6 +62,7 @@ class Tokens(StrEnum):
     bool_equal = "РАВНО"
     bool_equal_1 = "РАВЕН"
     bool_equal_2 = "РАВНЫ"
+    bool_equal_3 = "РАВНА"
     bool_not_equal = "НЕРАВНО"
     less = "МЕНЬШЕ"
     greater = "БОЛЬШЕ"
@@ -121,7 +122,7 @@ NOT_ALLOWED_TOKENS = set(Tokens) - {
     Tokens.in_, Tokens.background, Tokens.wait, Tokens.attr_access, Tokens.void
 }
 ALIASES_MAP = {
-    Tokens.bool_equal: [Tokens.bool_equal_1, Tokens.bool_equal_2],
+    Tokens.bool_equal: [Tokens.bool_equal_1, Tokens.bool_equal_2, Tokens.bool_equal_3],
     Tokens.defer: [Tokens.defer_1],
 }
 END_LINE_TOKENS = (Tokens.left_bracket, Tokens.right_bracket, Tokens.comma, Tokens.end_expr)
