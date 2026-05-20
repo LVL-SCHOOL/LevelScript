@@ -11,7 +11,9 @@ from src.core.types.line import Line
 from src.core.util import kill_process
 from src.util.build_tools.compile import Compiled
 
+class Comment: ...
 
+COMMENT_MARK = Comment()
 STANDARD_LIB_PATH = Path(__file__).resolve().parent.parent.parent
 STANDARD_LIB_PATH = f"{STANDARD_LIB_PATH}{settings.standard_lib_path_postfix}"
 STD_NAME = settings.std_name
@@ -79,6 +81,7 @@ class Preprocessor:
             clean_line = ""
 
             if line.startswith(Tokens.comment):
+                prepared_code.append(COMMENT_MARK)
                 continue
 
             for symbol in line:
@@ -99,6 +102,9 @@ class Preprocessor:
 
         for offset, line in enumerate(prepared_code):
             if not line:
+                continue
+
+            if isinstance(line, Comment):
                 continue
 
             if Tokens.end_expr in line and not line.startswith(Tokens.comment):
