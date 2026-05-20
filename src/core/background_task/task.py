@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from threading import Lock
-from typing import TYPE_CHECKING, Generator, Any, Optional
+from typing import TYPE_CHECKING, Generator, Any, Optional, Callable
 
 from src.core.types.basetype import BaseAtomicType
 
@@ -99,3 +99,52 @@ class ProcedureBackgroundTask(AbstractBackgroundTask):
 
     def __repr__(self):
         return f'<ProcedureBackgroundTask name={str(self)} {self.executor=}, {self._current_result=}, {self._done=}>'
+
+
+class PyExtendProcedureBackgroundTask(AbstractBackgroundTask):
+    def __init__(
+            self,  name: str, executor: Callable, py_extend_args: tuple = (), py_extend_kwargs: Optional[dict] = None
+    ):
+        super().__init__(name, executor)
+
+        if py_extend_kwargs is None:
+            py_extend_kwargs = {}
+
+        self.py_extend_args = py_extend_args
+        self.py_extend_kwargs = py_extend_kwargs
+        self.executor = executor
+        self._current_result = None
+        self._done = False
+        self._procedure_lock = Lock()
+
+    @property
+    def done(self):
+        return self._done
+
+    @done.setter
+    def done(self, value: bool):
+        with self._procedure_lock:
+            self._done = value
+
+    @property
+    def result(self):
+        return self._current_result
+
+    @result.setter
+    def result(self, value):
+        with self._procedure_lock:
+            self._current_result = value
+
+    def next_command(self):
+        self._current_result =  self.executor(*self.py_extend_args)
+
+        stop = StopIteration()
+        stop.value = self._current_result
+
+        raise stop
+
+    def __repr__(self):
+        return (
+            f'<PyExtendProcedureBackgroundTask '
+            f'name={str(self)} {self.executor=}, {self._current_result=}, {self._done=}>'
+        )

@@ -3,7 +3,8 @@ from typing import Union, NamedTuple, Type, Optional, TYPE_CHECKING, Callable, G
 
 from config import settings
 from src.core.background_task.schedule import get_task_scheduler
-from src.core.background_task.task import ProcedureBackgroundTask, AbstractBackgroundTask
+from src.core.background_task.task import ProcedureBackgroundTask, AbstractBackgroundTask, \
+    PyExtendProcedureBackgroundTask
 from src.core.call_func_stack import call_func_stack_builder
 from src.core.exceptions import (
     ErrorType,
@@ -618,17 +619,26 @@ class ExpressionExecutor(Executor):
                     call_metadata = self.init_py_extend_procedure_context(func, evaluate_stack)
 
                     if call_metadata.procedure is not None:
-                        call_func_stack_builder.push(func_name=operation.name, meta_info=self.expression.meta_info)
-                        self.call_py_extend_procedure(call_metadata.procedure, call_metadata.args, evaluate_stack)
-                        call_func_stack_builder.pop()
+                        # call_func_stack_builder.push(func_name=operation.name, meta_info=self.expression.meta_info)
+                        # self.call_py_extend_procedure(call_metadata.procedure, call_metadata.args, evaluate_stack)
+                        # call_func_stack_builder.pop()
+                        #
+                        # background_task = evaluate_stack.pop(-1)
+                        #
+                        # if not isinstance(background_task, AbstractBackgroundTask):
+                        #     raise ErrorType(
+                        #         f"Возвращаемое значение внешней процедуры '{func.name}' должно быть задачей!",
+                        #         self.expression.meta_info
+                        #     )
 
-                        background_task = evaluate_stack.pop(-1)
-
-                        if not isinstance(background_task, AbstractBackgroundTask):
-                            raise ErrorType(
-                                f"Возвращаемое значение внешней процедуры '{func.name}' должно быть задачей!",
-                                self.expression.meta_info
+                        func.check_args(call_metadata.args)
+                        background_task = PyExtendProcedureBackgroundTask(
+                            name=call_metadata.procedure.name,
+                            executor=func.call,
+                            py_extend_args=(
+                                call_metadata.args,
                             )
+                        )
 
                         self.task_scheduler.schedule_task(background_task)
                         evaluate_stack.append(background_task)
