@@ -11,7 +11,9 @@ from src.core.types.line import Line
 from src.core.util import kill_process
 from src.util.build_tools.compile import Compiled
 
+
 class Comment: ...
+
 
 COMMENT_MARK = Comment()
 STANDARD_LIB_PATH = Path(__file__).resolve().parent.parent.parent
