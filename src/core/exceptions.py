@@ -227,6 +227,12 @@ class InvalidSyntaxError(BaseError):
             case [Tokens.handler, *_]:
                 return f"{Tokens.handler} <ИМЯ_КЛАССА_ОШИБКИ> {Tokens.as_} <ИМЯ_ПЕРЕМЕННОЙ> {Tokens.left_bracket}"
 
+            case [Tokens.define, Tokens.method, *_]:
+                return (
+                    f"{Tokens.define} {Tokens.method} {Tokens.left_bracket}<ССЫЛКА>{Tokens.right_bracket} "
+                    f"<ИМЯ_МЕТОДА> {Tokens.left_bracket}<АРГУМЕНТЫ>{Tokens.right_bracket} {Tokens.left_bracket}"
+                )
+
             case [Tokens.right_bracket]:
                 return f"{Tokens.right_bracket} (закрытие блока)"
 

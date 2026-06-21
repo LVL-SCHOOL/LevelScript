@@ -125,7 +125,7 @@ class DefineClassParser(Parser):
 
                 case _:
                     printer.logging(f"Неверный синтаксис в строке: {line}", level="ERROR")
-                    raise InvalidSyntaxError(info=self.info)
+                    raise InvalidSyntaxError(line=line, info=self.info)
 
         printer.logging("Ошибка: не найдена закрывающая скобка класса", level="ERROR")
         raise InvalidSyntaxError
