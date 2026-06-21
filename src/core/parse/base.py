@@ -2,7 +2,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import Type, Sequence, Union, Optional
 
-from src.core.parse.lexer import Lexer
+from src.core.lexer import Lexer
 from src.core.types.basetype import BaseType
 from src.core.tokens import Tokens
 from src.core.types.line import Line, Info
