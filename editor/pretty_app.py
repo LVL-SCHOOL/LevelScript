@@ -1,3 +1,4 @@
+import multiprocessing
 import queue
 import tkinter as tk
 from multiprocessing import Queue, Process
@@ -1052,6 +1053,7 @@ class TextEditor:
 
 
 def main():
+    multiprocessing.freeze_support()
     root = tk.Tk()
     editor = TextEditor(root)
     root.mainloop()
