@@ -25,7 +25,7 @@ from src.core.types.basetype import BaseAtomicType, BaseType
 from src.core.types.classes import ClassDefinition, ClassInstance, Method, ClassField, Constructor
 from src.core.types.operation import Operator
 from src.core.types.procedure import Expression, Procedure, LinkedProcedure, ProcedureContextName
-from src.core.types.variable import ScopeStack, traverse_scope, Variable
+from src.core.types.variable import ScopeStack, Variable
 from src.core.extend.function_wrap import PyExtendWrapper
 
 if TYPE_CHECKING:

@@ -98,6 +98,11 @@ class Law:
             if code == "выход":
                 success_process(f"Операция '{code}' завершена успешно.")
 
+            if code == "очистить":
+                for _ in range(100):
+                    print()
+                continue
+
             if code.endswith(Tokens.left_bracket):
                 count_left_brackets = 1
                 code_storage = [code]
@@ -129,6 +134,6 @@ class Law:
 if __name__ == '__main__':
     law = Law()
     law.run()
-    # file = "ls_tests\\test_94.raw"
+    # file = "ls_tests\\test_95.raw"
     # run_file(file)
     # build(file)
