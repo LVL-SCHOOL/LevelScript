@@ -1,16 +1,15 @@
 import multiprocessing
-import queue
+import subprocess
+import tempfile
+import os
 import tkinter as tk
-from multiprocessing import Queue, Process
-from tkinter import scrolledtext, messagebox, Text, ttk
+from threading import Thread
+from tkinter import messagebox, Text, ttk
 import re
 import sys
 
 from config import settings
-from src.core.call_func_stack import get_stack_pretty_str
 from src.core.tokens import Tokens
-from src.util.build_tools.build import build
-from src.util.build_tools.starter import run_file, run_string
 from src.util.console_worker import printer
 
 
@@ -153,31 +152,6 @@ class LineNumbers(Text):
             pass
 
 
-class OutputRedirector:
-    def __init__(self, text_widget):
-        self.text_widget = text_widget
-
-    def write(self, string):
-        self.text_widget.insert(tk.END, string)
-        self.text_widget.see(tk.END)
-        self.text_widget.update_idletasks()
-
-    def flush(self):
-        pass
-
-
-class RealTimeOutputQueue:
-    def __init__(self, output_queue):
-        self.output_queue = output_queue
-
-    def write(self, string):
-        if string:
-            self.output_queue.put(("output", string))
-
-    def flush(self):
-        pass
-
-
 class SyntaxHighlighter:
     def __init__(self):
         self.theme = {
@@ -283,8 +257,6 @@ class SyntaxHighlighter:
                     start_pos = f"1.0+{match.start()}c"
                     end_pos = f"1.0+{match.end()}c"
 
-                    # Проверяем, что это действительно отдельное слово
-                    # а не часть другого слова
                     if not self.is_whole_word(content, match.start(), match.end()):
                         continue
 
@@ -295,11 +267,9 @@ class SyntaxHighlighter:
                     text_widget.tag_add(tag_name, start_pos, end_pos)
 
     def create_pattern(self, keyword, case_sensitive):
-        """Создает regex pattern для поиска ключевых слов"""
-        if len(keyword) == 1:  # Одиночные символы (операторы, скобки и т.д.)
+        if len(keyword) == 1:
             pattern = re.escape(keyword)
-        else:  # Многосимвольные ключевые слова
-            # Для русского языка нужно использовать негативные просмотры
+        else:
             pattern = r'(?<![а-яА-ЯёЁa-zA-Z0-9_])' + re.escape(keyword) + r'(?![а-яА-ЯёЁa-zA-Z0-9_])'
 
         if not case_sensitive:
@@ -307,18 +277,13 @@ class SyntaxHighlighter:
         return pattern
 
     def is_whole_word(self, text, start, end):
-        """Проверяет, является ли найденное совпадение целым словом"""
-        # Проверяем символ перед словом
         if start > 0:
             char_before = text[start - 1]
-            # Если перед словом буква, цифра или подчеркивание - это часть другого слова
             if char_before.isalpha() or char_before.isdigit() or char_before == '_':
                 return False
 
-        # Проверяем символ после слова
         if end < len(text):
             char_after = text[end]
-            # Если после слова буква, цифра или подчеркивание - это часть другого слова
             if char_after.isalpha() or char_after.isdigit() or char_after == '_':
                 return False
 
@@ -347,13 +312,17 @@ class SyntaxHighlighter:
                 text_widget.tag_configure(tag_name, foreground=color)
             text_widget.tag_add(tag_name, start_pos, end_pos)
 
+
 class TextEditor:
     def __init__(self, root):
         self.execution_process = None
-        self.output_queue = None
         self.root = root
         self.root.title("⚖️ LawScript IDE")
         self.root.geometry("1200x800")
+        self.t_runner = None
+
+        # Путь к law.exe
+        self.law_exe = self._find_law_exe()
 
         try:
             self.root.iconbitmap('icon.ico')
@@ -364,7 +333,6 @@ class TextEditor:
 
         self.highlighter = SyntaxHighlighter()
         self.current_file_path = None
-        self.output_redirector = None
 
         self.colors = {
             'bg_primary': '#1e1e1e',
@@ -382,7 +350,38 @@ class TextEditor:
         self.create_widgets()
         self.bind_events()
         self.setup_keybindings()
-        self.setup_output_redirector()
+
+    @staticmethod
+    def _find_law_exe():
+        """Ищет law.exe в PATH, если не находит - запрашивает путь"""
+        import shutil
+        from tkinter import filedialog
+
+        # Ищем в PATH (переменная окружения Windows)
+        law_path = shutil.which('law.exe') or shutil.which('law')
+        if law_path:
+            return law_path
+
+        # Если не нашли - показываем диалог
+        result = messagebox.askyesno(
+            "LawScript не найден",
+            "law.exe не найден в PATH.\n\n"
+            "Хотите указать путь к law.exe вручную?\n\n"
+            "(Выберите 'Нет' чтобы продолжить без law.exe)"
+        )
+
+        if result:
+            file_path = filedialog.askopenfilename(
+                title="Укажите путь к law.exe",
+                filetypes=[
+                    ("Исполняемые файлы", "*.exe"),
+                    ("Все файлы", "*.*"),
+                ]
+            )
+            if file_path and os.path.exists(file_path):
+                return os.path.abspath(file_path)
+
+        return None
 
     def setup_styles(self):
         style = ttk.Style()
@@ -436,7 +435,6 @@ class TextEditor:
             ("▶️", "Запуск", self.run_code, 'primary'),
             ("⏹️", "Стоп", self.stop_execution, 'danger'),
             ("⚡", "Собрать", self.build_code, 'warning'),
-            ("🗑️", "Очистить", self.clear_output, 'secondary'),
         ]
 
         for icon, text, command, style in buttons:
@@ -470,12 +468,6 @@ class TextEditor:
 
         editor_frame = self.create_editor_frame()
         paned_window.add(editor_frame)
-
-        output_frame = self.create_output_frame()
-        paned_window.add(output_frame)
-
-        paned_window.paneconfig(editor_frame, height=500, stretch='always')
-        paned_window.paneconfig(output_frame, height=250, stretch='never')
 
     def create_editor_frame(self):
         editor_frame = tk.Frame(bg=self.colors['bg_primary'])
@@ -528,54 +520,6 @@ class TextEditor:
         self.text_area.bind('<ButtonRelease-1>', self.highlight_current_line)
 
         return editor_frame
-
-    def create_output_frame(self):
-        output_frame = tk.Frame(bg=self.colors['bg_tertiary'])
-
-        output_header = tk.Frame(output_frame, bg=self.colors['bg_tertiary'], height=30)
-        output_header.pack(side=tk.TOP, fill=tk.X)
-        output_header.pack_propagate(False)
-
-        title_label = tk.Label(
-            output_header,
-            text="Вывод программы",
-            font=("Segoe UI", 10, "bold"),
-            fg=self.colors['fg_primary'],
-            bg=self.colors['bg_tertiary']
-        )
-        title_label.pack(side=tk.LEFT, padx=10)
-
-        output_buttons_frame = tk.Frame(output_header, bg=self.colors['bg_tertiary'])
-        output_buttons_frame.pack(side=tk.RIGHT, padx=5)
-
-        clear_btn = ModernButton(
-            output_buttons_frame,
-            text="Очистить",
-            command=self.clear_output,
-            style='secondary'
-        )
-        clear_btn.pack(side=tk.LEFT, padx=2)
-
-        copy_btn = ModernButton(
-            output_buttons_frame,
-            text="Копировать",
-            command=self.copy_output,
-            style='secondary'
-        )
-        copy_btn.pack(side=tk.LEFT, padx=2)
-
-        self.output_area = scrolledtext.ScrolledText(
-            output_frame,
-            wrap=tk.WORD,
-            font=("Consolas", 10),
-            bg=self.colors['bg_primary'],
-            fg=self.colors['fg_primary'],
-            relief=tk.FLAT,
-            highlightthickness=0
-        )
-        self.output_area.pack(fill=tk.BOTH, expand=True, padx=1, pady=(0, 1))
-
-        return output_frame
 
     def create_status_bar(self):
         status_frame = tk.Frame(self.root, bg=self.colors['bg_tertiary'], height=25)
@@ -643,23 +587,38 @@ class TextEditor:
         run_menu.add_command(label="Остановить выполнение F6", command=self.stop_execution)
         run_menu.add_separator()
         run_menu.add_command(label="Собрать проект", command=self.build_code)
-        run_menu.add_command(label="Очистить вывод", command=self.clear_output)
 
         help_menu = tk.Menu(self.menu_bar, tearoff=0, bg=self.colors['bg_primary'], fg=self.colors['fg_primary'])
         self.menu_bar.add_cascade(label="Справка", menu=help_menu)
         help_menu.add_command(label="О программе", command=self.show_about)
+        help_menu = tk.Menu(self.menu_bar, tearoff=0, bg=self.colors['bg_primary'], fg=self.colors['fg_primary'])
+        self.menu_bar.add_cascade(label="Справка", menu=help_menu)
+        help_menu.add_command(label="О программе", command=self.show_about)
+        help_menu.add_separator()
+        help_menu.add_command(label="Указать путь к law.exe", command=self._select_law_exe)
+
+    def _select_law_exe(self):
+        """Диалог выбора law.exe"""
+        from tkinter import filedialog
+
+        file_path = filedialog.askopenfilename(
+            title="Укажите путь к law.exe",
+            filetypes=[
+                ("Исполняемые файлы", "*.exe"),
+                ("Все файлы", "*.*"),
+            ]
+        )
+        if file_path and os.path.exists(file_path):
+            self.law_exe = os.path.abspath(file_path)
+            self.status_exec_label.config(
+                text=f"law.exe: {self.law_exe}",
+                fg=self.colors['success']
+            )
 
     def highlight_current_line(self, event=None):
         self.text_area.tag_remove("current_line", "1.0", "end")
         current_line = self.text_area.index(tk.INSERT).split('.')[0]
         self.text_area.tag_add("current_line", f"{current_line}.0", f"{current_line}.end")
-
-    def copy_output(self):
-        text = self.output_area.get(1.0, tk.END)
-        if text.strip():
-            self.root.clipboard_clear()
-            self.root.clipboard_append(text)
-            self.status_exec_label.config(text="Вывод скопирован", fg=self.colors['success'])
 
     def show_about(self):
         about_window = tk.Toplevel(self.root)
@@ -691,16 +650,10 @@ class TextEditor:
             bg=self.colors['bg_primary']
         ).pack(pady=5)
 
-    def setup_output_redirector(self):
-        self.output_redirector = OutputRedirector(self.output_area)
-
-    def clear_output(self):
-        self.output_area.delete(1.0, tk.END)
-
     def build_code(self):
         from tkinter import filedialog
         file_path = filedialog.askopenfilename(
-            title="Выберите файл для запуска",
+            title="Выберите файл для сборки",
             filetypes=[
                 ("Контракты", "*.raw"),
                 ("Скомпилированные проекты", "*.law"),
@@ -710,20 +663,23 @@ class TextEditor:
         )
 
         if file_path:
-            self.clear_output()
-            self.status_exec_label.config(text="Выполнение...", fg=self.colors['warning'])
+            self.status_exec_label.config(text="Сборка...", fg=self.colors['warning'])
 
             try:
-                printer.debug = True
-                build(file_path)
+                if self.law_exe:
+                    result = subprocess.run(
+                        [self.law_exe, 'build', file_path],
+                        capture_output=True,
+                        text=True
+                    )
+                    if result.returncode == 0:
+                        self.status_exec_label.config(text="Успех!", fg=self.colors['success'])
+                    else:
+                        self.status_exec_label.config(text=f"Ошибка сборки", fg=self.colors['error'])
+                else:
+                    self.status_exec_label.config(text="law.exe не найден", fg=self.colors['error'])
             except Exception as e:
-                msg = f"Ошибка: {e}"
-                self.status_exec_label.config(text=msg, fg=self.colors['error'])
-            else:
-                msg = "Успех!"
-                self.status_exec_label.config(text=msg, fg=self.colors['success'])
-
-            printer.debug = settings.debug
+                self.status_exec_label.config(text=f"Ошибка: {e}", fg=self.colors['error'])
 
     def run_code(self):
         code = self.text_area.get(1.0, tk.END).strip()
@@ -731,93 +687,90 @@ class TextEditor:
             messagebox.showwarning("Предупреждение", "Нет кода для выполнения!")
             return
 
-        self.clear_output()
+        if not self.law_exe:
+            messagebox.showerror("Ошибка", "law.exe не найден!\nСкомпилируйте проект или укажите путь к law.exe")
+            return
+
+        # Останавливаем предыдущее выполнение
+        self.stop_execution()
+
         self.status_exec_label.config(text="Выполнение...", fg=self.colors['warning'])
 
-        self.output_queue = Queue()
-
-        self.execution_process = Process(
-            target=self._execute_code_in_process,
-            args=(code, self.output_queue)
+        # Запускаем в отдельном потоке
+        self.t_runner = Thread(
+            target=self._run_code_subprocess,
+            args=(code,),
+            daemon=True
         )
-        self.execution_process.daemon = True
-        self.execution_process.start()
+        self.t_runner.start()
 
-        self.monitor_output()
-
-    def monitor_output(self):
+    def _run_code_subprocess(self, code):
+        """Запускает код через law.exe в subprocess"""
         try:
-            got_data = False
-            while True:
-                try:
-                    msg_type, content = self.output_queue.get_nowait()
-                    got_data = True
-
-                    self.output_area.insert(tk.END, content)
-                    self.output_area.see(tk.END)
-                    self.output_area.update_idletasks()
-
-                except queue.Empty:
-                    break
-
-            if not self.execution_process.is_alive():
-                try:
-                    while True:
-                        msg_type, content = self.output_queue.get_nowait()
-                        self.output_area.insert(tk.END, content)
-                        self.output_area.see(tk.END)
-                        self.output_area.update_idletasks()
-                except queue.Empty:
-                    pass
-
-                self.output_area.insert(tk.END, "\n=== Выполнение завершено ===\n")
-                self.output_area.see(tk.END)
-                self.status_exec_label.config(text="Готов", fg=self.colors['success'])
-                return
-
-        except Exception as e:
-            self.output_area.insert(tk.END, f"Ошибка мониторинга: {e}\n")
-            self.status_exec_label.config(text="Ошибка мониторинга", fg=self.colors['error'])
-
-        if self.execution_process.is_alive():
-            self.root.after(50, self.monitor_output)
-
-    @staticmethod
-    def _execute_code_in_process(code, output_queue):
-        try:
-            real_time_output = RealTimeOutputQueue(output_queue)
-
-            old_stdout = sys.stdout
-            old_stderr = sys.stderr
-
-            sys.stdout = real_time_output
-            sys.stderr = real_time_output
+            # Создаем временный файл с кодом
+            with tempfile.NamedTemporaryFile(
+                    mode='w',
+                    suffix='.raw',
+                    delete=False,
+                    encoding='utf-8'
+            ) as tmp_file:
+                tmp_file.write(code)
+                tmp_file_path = tmp_file.name
 
             try:
-                run_string(code)
-            except Exception as e:
-                stack_trace = get_stack_pretty_str()
-                if stack_trace:
-                    stack_trace += "\n"
-                printer.print_error(f"{stack_trace}{str(e)}")
+                # Запускаем law.exe --run <файл>
+                self.execution_process = subprocess.Popen(
+                    [self.law_exe, '--run', tmp_file_path],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    bufsize=1,
+                    universal_newlines=True,
+                    errors='replace',  # Игнорируем ошибки декодирования
+                    creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == 'win32' else 0
+                )
+
+                # Читаем вывод в реальном времени
+                if self.execution_process.stdout:
+                    for line in self.execution_process.stdout:
+                        print(line, end='')  # Выводим в консоль IDE
+
+                self.execution_process.wait()
+
+                if self.execution_process.returncode == 0:
+                    self.root.after(0, self.status_exec_label.config,
+                                    {"text": "Готов", "fg": self.colors['success']})
+                else:
+                    self.root.after(0, self.status_exec_label.config,
+                                    {"text": f"Ошибка (код {self.execution_process.returncode})",
+                                     "fg": self.colors['error']})
+
+            finally:
+                # Удаляем временный файл
+                try:
+                    os.unlink(tmp_file_path)
+                except:
+                    pass
+
+                input()
 
         except Exception as e:
-            import traceback
-            error_msg = f"Ошибка в процессе выполнения: {str(e)}\n{traceback.format_exc()}"
-            output_queue.put(("error", error_msg))
-
-        finally:
-            sys.stdout = old_stdout
-            sys.stderr = old_stderr
+            self.root.after(0, self.status_exec_label.config,
+                            {"text": f"Ошибка: {str(e)}", "fg": self.colors['error']})
 
     def stop_execution(self):
-        if hasattr(self, 'execution_process') and self.execution_process.is_alive():
+        """Останавливает выполнение"""
+        if self.execution_process and self.execution_process.poll() is None:
             self.execution_process.terminate()
-            self.execution_process.join(timeout=1.0)
+            try:
+                self.execution_process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self.execution_process.kill()
 
-        self.output_area.insert(tk.END, "\n=== Выполнение прервано пользователем ===\n")
-        self.output_area.see(tk.END)
-        self.status_exec_label.config(text="Выполнение прервано", fg=self.colors['error'])
+            self.status_exec_label.config(text="Выполнение прервано", fg=self.colors['error'])
+        elif self.t_runner and self.t_runner.is_alive():
+            self.status_exec_label.config(text="Ожидание завершения...", fg=self.colors['warning'])
+        else:
+            self.status_exec_label.config(text="Нет активного выполнения", fg=self.colors['warning'])
 
     def run_file_dialog(self):
         from tkinter import filedialog
@@ -835,30 +788,31 @@ class TextEditor:
             self.run_external_file(file_path)
 
     def run_external_file(self, file_path):
-        self.clear_output()
-        self.status_exec_label.config(text=f"Запуск файла: {file_path}", fg=self.colors['warning'])
+        if not self.law_exe:
+            messagebox.showerror("Ошибка", "law.exe не найден!")
+            return
+
+        self.status_exec_label.config(text=f"Запуск: {os.path.basename(file_path)}", fg=self.colors['warning'])
 
         try:
-            self.output_area.insert(tk.END, f"=== Запуск файла: {file_path} ===\n")
+            result = subprocess.run(
+                [self.law_exe, '--run', file_path],
+                capture_output=True,
+                text=True
+            )
 
-            old_stdout = sys.stdout
-            old_stderr = sys.stderr
+            if result.stdout:
+                print(result.stdout)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
 
-            sys.stdout = self.output_redirector
-            sys.stderr = self.output_redirector
-
-            run_file(file_path)
-
-            self.output_area.insert(tk.END, "\n=== Выполнение завершено ===\n")
-            self.status_exec_label.config(text="Готов", fg=self.colors['success'])
+            if result.returncode == 0:
+                self.status_exec_label.config(text="Готов", fg=self.colors['success'])
+            else:
+                self.status_exec_label.config(text=f"Ошибка", fg=self.colors['error'])
 
         except Exception as e:
-            self.output_area.insert(tk.END, f"\nОшибка при запуске файла: {str(e)}\n")
             self.status_exec_label.config(text=f"Ошибка: {str(e)}", fg=self.colors['error'])
-
-        finally:
-            sys.stdout = old_stdout
-            sys.stderr = old_stderr
 
     def save_as_file(self):
         from tkinter import filedialog
@@ -918,7 +872,6 @@ class TextEditor:
 
     def reset_zoom(self):
         self.text_area.configure(font=("Consolas", 12))
-        self.output_area.configure(font=("Consolas", 10))
         self.line_numbers.configure(font=("Consolas", 12))
 
     def change_font_size(self, delta):
@@ -1049,6 +1002,7 @@ class TextEditor:
 
     def exit_editor(self):
         if messagebox.askokcancel("Выход", "Вы уверены, что хотите выйти?"):
+            self.stop_execution()
             self.root.quit()
 
 

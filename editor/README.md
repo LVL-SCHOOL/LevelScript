@@ -1,0 +1,1 @@
+pyinstaller --onedir --name=editor --distpath=./dist/editor --workpath=./build/editor --specpath=./build/editor --hidden-import=config --hidden-import=requests --hidden-import=pygame --paths=. .\editor\pretty_app.py
