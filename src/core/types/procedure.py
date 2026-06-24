@@ -31,7 +31,10 @@ class Procedure(CodeBlock):
         return "Процедура"
 
     def __str__(self):
-        return f"Процедура('{self.name}') кол-во аргументов: {len(self.arguments_names)}"
+        return (
+            f"Процедура('{self.name}') "
+            f"кол-во аргументов: {len(self.arguments_names) if not self.is_inf_args else 'неограниченное'}"
+        )
 
     def __repr__(self):
         return self.name
