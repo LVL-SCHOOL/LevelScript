@@ -11,7 +11,6 @@ _MATH_OP_TOKENS: Final[set] = {
     Tokens.exponentiation,
     Tokens.percent,
     Tokens.div,
-    Tokens.quotation,
 }
 _BOOL_OP_TOKENS: Final[set] = {
     Tokens.and_,
@@ -127,6 +126,27 @@ def check_bool_ops(expr: list[str], token: Tokens, offset: int):
     raise InvalidExpression(_error_with_arrow(_ERROR_MESSAGE.format(next_tok=next_tok, token=token), expr, offset))
 
 
+def check_quotation(expr: list[str], token: Tokens, offset: int):
+    valid_tokens = {
+        Tokens.left_bracket,
+        Tokens.right_bracket,
+        Tokens.comma,
+        Tokens.attr_access,
+        *_MATH_OP_TOKENS,
+        *_BOOL_OP_TOKENS,
+    }
+
+    next_tok = get_next_tok(expr, offset)
+
+    if next_tok is None:
+        return
+
+    if next_tok in valid_tokens:
+        return
+
+    raise InvalidExpression(_error_with_arrow(_ERROR_MESSAGE.format(next_tok=next_tok, token=token), expr, offset))
+
+
 def check_default(expr: list[str], token: Tokens, offset: int):
     valid_tokens = {
         *ALL_TOKENS,
@@ -156,6 +176,7 @@ NEXT_TOKEN_CHECKERS: dict[Tokens, Callable[[list[str], Tokens, int], None]] = {
     Tokens.wait: check_wait,
     Tokens.plus: check_math_ops,
     Tokens.minus: check_math_ops,
+    Tokens.star: check_math_ops,
     Tokens.exponentiation: check_math_ops,
     Tokens.div: check_math_ops,
     Tokens.percent: check_math_ops,
@@ -166,4 +187,5 @@ NEXT_TOKEN_CHECKERS: dict[Tokens, Callable[[list[str], Tokens, int], None]] = {
     Tokens.bool_not_equal: check_bool_ops,
     Tokens.less: check_bool_ops,
     Tokens.greater: check_bool_ops,
+    Tokens.quotation: check_quotation,
 }
