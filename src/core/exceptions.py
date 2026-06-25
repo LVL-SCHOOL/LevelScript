@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from copy import copy
 from difflib import SequenceMatcher
 from typing import Optional, Any, TYPE_CHECKING, Final, Type
 
@@ -138,9 +139,10 @@ class BaseError(Exception):
         return f"{self.exc_name}: {self.msg}"
 
     def raw_throw(self):
-        self._raw_mode = True
+        copy_self = copy(self)
+        copy_self._raw_mode = True
 
-        return self
+        return copy_self
 
     @classmethod
     def get_inst(cls):
