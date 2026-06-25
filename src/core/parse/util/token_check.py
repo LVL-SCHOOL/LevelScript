@@ -3,6 +3,7 @@ from typing import Final, Callable
 from src.core.exceptions import InvalidExpression
 from src.core.parse.base import is_identifier, is_float, is_integer
 from src.core.tokens import Tokens, ALIASES_MAP, ServiceTokens, ALL_TOKENS
+from src.core.types.procedure import LinkedProcedure
 
 _MATH_OP_TOKENS: Final[set] = {
     Tokens.star,
@@ -147,6 +148,27 @@ def check_quotation(expr: list[str], token: Tokens, offset: int):
     raise InvalidExpression(_error_with_arrow(_ERROR_MESSAGE.format(next_tok=next_tok, token=token), expr, offset))
 
 
+def check_true_false(expr: list[str], token: Tokens, offset: int):
+    valid_tokens = {
+        Tokens.left_bracket,
+        Tokens.right_bracket,
+        Tokens.comma,
+        Tokens.attr_access,
+        *_MATH_OP_TOKENS,
+        *_BOOL_OP_TOKENS,
+    }
+
+    next_tok = get_next_tok(expr, offset)
+
+    if next_tok is None:
+        return
+
+    if next_tok in valid_tokens:
+        return
+
+    raise InvalidExpression(_error_with_arrow(_ERROR_MESSAGE.format(next_tok=next_tok, token=token), expr, offset))
+
+
 def check_default(expr: list[str], token: Tokens, offset: int):
     valid_tokens = {
         *ALL_TOKENS,
@@ -188,4 +210,6 @@ NEXT_TOKEN_CHECKERS: dict[Tokens, Callable[[list[str], Tokens, int], None]] = {
     Tokens.less: check_bool_ops,
     Tokens.greater: check_bool_ops,
     Tokens.quotation: check_quotation,
+    Tokens.true: check_true_false,
+    Tokens.false: check_true_false,
 }
