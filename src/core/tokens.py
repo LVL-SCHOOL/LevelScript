@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Final
 
 
 class Tokens(StrEnum):
@@ -115,8 +116,8 @@ class ServiceTokens(StrEnum):
     in_background = Tokens.in_ + Tokens.background
 
 
-ALL_TOKENS = set(list(ServiceTokens) + list(Tokens))
-NOT_ALLOWED_TOKENS = set(Tokens) - {
+ALL_TOKENS: Final[set] = set(list(ServiceTokens) + list(Tokens))
+NOT_ALLOWED_TOKENS: Final[set] = set(Tokens) - {
     Tokens.comment, Tokens.star, Tokens.left_bracket, Tokens.right_bracket,
     Tokens.left_square_bracket, Tokens.right_square_bracket, Tokens.comma, Tokens.dot,
     Tokens.equal, Tokens.plus, Tokens.minus, Tokens.exponentiation, Tokens.percent,
@@ -124,9 +125,28 @@ NOT_ALLOWED_TOKENS = set(Tokens) - {
     Tokens.bool_equal, Tokens.bool_not_equal, Tokens.less, Tokens.greater, Tokens.true, Tokens.false,
     Tokens.in_, Tokens.background, Tokens.wait, Tokens.attr_access, Tokens.void
 }
-ALIASES_MAP = {
+ALIASES_MAP: Final[dict] = {
     Tokens.bool_equal: [Tokens.bool_equal_1, Tokens.bool_equal_2, Tokens.bool_equal_3],
     Tokens.bool_not_equal: [Tokens.bool_not_equal_1, Tokens.bool_not_equal_2, Tokens.bool_not_equal_3],
     Tokens.defer: [Tokens.defer_1],
 }
-END_LINE_TOKENS = (Tokens.left_bracket, Tokens.right_bracket, Tokens.comma, Tokens.end_expr)
+END_LINE_TOKENS: Final[tuple] = (Tokens.left_bracket, Tokens.right_bracket, Tokens.comma, Tokens.end_expr)
+MATH_OP_TOKENS: Final[set] = {
+    Tokens.star,
+    Tokens.plus,
+    Tokens.minus,
+    Tokens.exponentiation,
+    Tokens.percent,
+    Tokens.div,
+}
+BOOL_OP_TOKENS: Final[set] = {
+    Tokens.and_,
+    Tokens.or_,
+    Tokens.not_,
+    Tokens.bool_equal,
+    Tokens.bool_not_equal,
+    Tokens.less,
+    Tokens.greater,
+    *ALIASES_MAP.get(Tokens.bool_equal, []),
+    *ALIASES_MAP.get(Tokens.bool_not_equal, []),
+}

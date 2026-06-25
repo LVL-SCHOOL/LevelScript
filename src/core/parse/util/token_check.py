@@ -2,27 +2,8 @@ from typing import Final, Callable
 
 from src.core.exceptions import InvalidExpression
 from src.core.parse.base import is_identifier, is_float, is_integer
-from src.core.tokens import Tokens, ALIASES_MAP, ServiceTokens, ALL_TOKENS
+from src.core.tokens import Tokens, ServiceTokens, ALL_TOKENS, BOOL_OP_TOKENS, MATH_OP_TOKENS
 
-_MATH_OP_TOKENS: Final[set] = {
-    Tokens.star,
-    Tokens.plus,
-    Tokens.minus,
-    Tokens.exponentiation,
-    Tokens.percent,
-    Tokens.div,
-}
-_BOOL_OP_TOKENS: Final[set] = {
-    Tokens.and_,
-    Tokens.or_,
-    Tokens.not_,
-    Tokens.bool_equal,
-    Tokens.bool_not_equal,
-    Tokens.less,
-    Tokens.greater,
-    *ALIASES_MAP.get(Tokens.bool_equal, []),
-    *ALIASES_MAP.get(Tokens.bool_not_equal, []),
-}
 _ERROR_MESSAGE: Final[str] = "Оператор '{next_tok}' не может встречаться после '{token}'\n\n"
 
 
@@ -45,8 +26,8 @@ def check_right_bracket(expr: list[str], token: Tokens, offset: int):
         Tokens.right_bracket,
         Tokens.comma,
         Tokens.end_expr,
-        *_MATH_OP_TOKENS,
-        *_BOOL_OP_TOKENS,
+        *MATH_OP_TOKENS,
+        *BOOL_OP_TOKENS,
     }
 
     next_tok = get_next_tok(expr, offset)
@@ -93,7 +74,7 @@ def check_math_ops(expr: list[str], token: Tokens, offset: int):
         return
 
     if is_identifier(next_tok) or is_float(next_tok) or is_integer(next_tok):
-        if next_tok not in _BOOL_OP_TOKENS:
+        if next_tok not in BOOL_OP_TOKENS:
             return
 
     if next_tok in valid_tokens:
@@ -110,7 +91,7 @@ def check_bool_ops(expr: list[str], token: Tokens, offset: int):
         Tokens.false,
         Tokens.plus,
         Tokens.minus,
-        *_BOOL_OP_TOKENS,
+        *BOOL_OP_TOKENS,
     }
 
     next_tok = get_next_tok(expr, offset)
@@ -132,8 +113,8 @@ def check_quotation(expr: list[str], token: Tokens, offset: int):
         Tokens.right_bracket,
         Tokens.comma,
         Tokens.attr_access,
-        *_MATH_OP_TOKENS,
-        *_BOOL_OP_TOKENS,
+        *MATH_OP_TOKENS,
+        *BOOL_OP_TOKENS,
     }
 
     next_tok = get_next_tok(expr, offset)
@@ -152,8 +133,8 @@ def check_true_false(expr: list[str], token: Tokens, offset: int):
         Tokens.right_bracket,
         Tokens.comma,
         Tokens.attr_access,
-        *_MATH_OP_TOKENS,
-        *_BOOL_OP_TOKENS,
+        *MATH_OP_TOKENS,
+        *BOOL_OP_TOKENS,
     }
 
     next_tok = get_next_tok(expr, offset)
