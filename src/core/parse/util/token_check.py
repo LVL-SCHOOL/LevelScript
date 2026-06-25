@@ -3,7 +3,6 @@ from typing import Final, Callable
 from src.core.exceptions import InvalidExpression
 from src.core.parse.base import is_identifier, is_float, is_integer
 from src.core.tokens import Tokens, ALIASES_MAP, ServiceTokens, ALL_TOKENS
-from src.core.types.procedure import LinkedProcedure
 
 _MATH_OP_TOKENS: Final[set] = {
     Tokens.star,
