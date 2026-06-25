@@ -66,6 +66,9 @@ class MultiExpressionParser(Parser):
         ):
             self.expressions.pop(-2)
 
+    def separate_line_to_token(self, line: Line) -> list[str]:
+        return self.lexer.separate(line, check_end_token=False)
+
     def parse(self, body: list[Line], jump) -> int:
         self.jump = jump
         printer.logging(f"Начало парсинга выражений с jump={self.jump} {Body.__name__}", level="INFO")

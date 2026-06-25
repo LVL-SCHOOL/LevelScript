@@ -4,7 +4,7 @@ from src.core.types.line import Line, Info
 
 
 class Lexer:
-    def separate(self, line: Line) -> list[str]:
+    def separate(self, line: Line, *, check_end_token=True) -> list[str]:
         self._check_quotes(line)
         raw_line = line.raw_data
 
@@ -23,18 +23,8 @@ class Lexer:
                     raw_line = raw_line[:offset].rstrip()
                     break
 
-        end_symbols = END_LINE_TOKENS
-
-        for end_symbol in end_symbols:
-            if raw_line.endswith(end_symbol):
-                break
-        else:
-            raise InvalidSyntaxError(
-                f"Некорректная строка: '{line.raw_data}', возможно Вы забыли один из этих знаков в конце: "
-                f"{", ".join([f"'{s}'" for s in end_symbols])}\n\n"
-                f"{line.raw_data}\n{" " * len(line.raw_data)}^\n\n",
-                info=line.get_file_info()
-            )
+        if check_end_token:
+            self.end_symbols_check(raw_line, line)
 
         separated_line = self.__split(raw_line)
 
@@ -65,16 +55,30 @@ class Lexer:
             if unknown_token:
                 tokens.append(unknown_token)
 
-        match list(tokens[-1]):
-            case [*old, end]:
-                if old:
-                    tokens[-1] = "".join(old)
-                    tokens.append(end)
-                else:
-                    tokens[-1] = end
+        if check_end_token:
+            match list(tokens[-1]):
+                case [*old, end]:
+                    if old:
+                        tokens[-1] = "".join(old)
+                        tokens.append(end)
+                    else:
+                        tokens[-1] = end
 
         self._check_tokens(tokens, line.get_file_info())
         return self._convert_aliases_to_token(tokens)
+
+    @staticmethod
+    def end_symbols_check(raw_line: str, line: Line):
+        for end_symbol in END_LINE_TOKENS:
+            if raw_line.endswith(end_symbol):
+                break
+        else:
+            raise InvalidSyntaxError(
+                f"Некорректная строка: '{line.raw_data}', возможно Вы забыли один из этих знаков в конце: "
+                f"{", ".join([f"'{s}'" for s in END_LINE_TOKENS])}\n\n"
+                f"{line.raw_data}\n{" " * len(line.raw_data)}^\n\n",
+                info=line.get_file_info()
+            )
 
     @staticmethod
     def _check_tokens(tokens: list[str], info: Info):

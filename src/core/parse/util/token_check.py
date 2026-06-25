@@ -172,7 +172,7 @@ def check_default(expr: list[str], token: Tokens, offset: int):
         raise InvalidExpression(_error_with_arrow(_ERROR_MESSAGE.format(next_tok=next_tok, token=token), expr, offset))
 
 
-NEXT_TOKEN_CHECKERS: dict[Tokens, Callable[[list[str], Tokens, int], None]] = {
+NEXT_TOKEN_CHECKERS: dict[str, Callable[[list[str], str, int], None]] = {
     Tokens.right_bracket: check_right_bracket,
     Tokens.wait: check_wait,
     Tokens.plus: check_math_ops,
