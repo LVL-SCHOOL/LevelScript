@@ -20,7 +20,6 @@ for file in files:
     if file.startswith("test") and file.endswith(".raw"):
         test_num += 1
 
-        time.sleep(0.5)
         print(f"#{test_num}: Запуск файла: {file}")
 
         st0 = time.perf_counter()
@@ -29,4 +28,3 @@ for file in files:
 
         print(f"Тест #{test_num}: Время выполнения: {st1 - st0}")
         print(f"Тест #{test_num} успешно завершен")
-        time.sleep(0.5)

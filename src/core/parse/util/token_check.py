@@ -21,6 +21,7 @@ _BOOL_OP_TOKENS: Final[set] = {
     Tokens.less,
     Tokens.greater,
     *ALIASES_MAP.get(Tokens.bool_equal, []),
+    *ALIASES_MAP.get(Tokens.bool_not_equal, []),
 }
 _ERROR_MESSAGE: Final[str] = "Оператор '{next_tok}' не может встречаться после '{token}'\n\n"
 
@@ -128,7 +129,6 @@ def check_bool_ops(expr: list[str], token: Tokens, offset: int):
 
 def check_quotation(expr: list[str], token: Tokens, offset: int):
     valid_tokens = {
-        Tokens.left_bracket,
         Tokens.right_bracket,
         Tokens.comma,
         Tokens.attr_access,
@@ -149,7 +149,6 @@ def check_quotation(expr: list[str], token: Tokens, offset: int):
 
 def check_true_false(expr: list[str], token: Tokens, offset: int):
     valid_tokens = {
-        Tokens.left_bracket,
         Tokens.right_bracket,
         Tokens.comma,
         Tokens.attr_access,
