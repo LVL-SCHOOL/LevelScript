@@ -3,7 +3,7 @@ from typing import Union, Optional
 from src.core.exceptions import InvalidSyntaxError
 from src.core.parse.base import MetaObject, Image, Parser, is_identifier, is_float, is_integer
 from src.core.parse.procedure.docs_block import DocsBlockParser
-from src.core.parse.procedure.muti_expressions import MultiExpressionParser
+from src.core.parse.procedure.muti_expressions import MultiExpressionParser, count_real_left_bracket
 from src.core.tokens import Tokens, NOT_ALLOWED_TOKENS
 from src.core.types.basetype import BaseType
 from src.core.types.docs import Docs
@@ -147,10 +147,18 @@ class BodyParser(Parser):
         target = expr[:equal_idx]
         override = expr[equal_idx + 1:]
 
+        if not target:
+            raise InvalidSyntaxError(
+                "Целевое выражение для присвоения значения не может быть пустым", info=self.info
+            )
+
+        if not override:
+            raise InvalidSyntaxError("Значение выражения не может быть пустым", info=self.info)
+
         match override:
-            case [_, Tokens.left_bracket]:
+            case [*_, Tokens.left_bracket]:
                 override.extend(self.execute_parse(
-                    MultiExpressionParser(expr.count(Tokens.left_bracket)), body, self.next_num_line(num)
+                    MultiExpressionParser(count_real_left_bracket(expr)), body, self.next_num_line(num)
                 ).expressions)
 
         self.commands.append(
@@ -206,7 +214,7 @@ class BodyParser(Parser):
                     printer.logging(f"Добавлена команда Print с выражением: {expr}", level="INFO")
 
                 case [Tokens.print_, *expr]:
-                    res_expr = self.execute_parse(MultiExpressionParser(expr.count(Tokens.left_bracket)), body, self.next_num_line(num))
+                    res_expr = self.execute_parse(MultiExpressionParser(count_real_left_bracket(expr)), body, self.next_num_line(num))
 
                     expr.extend(res_expr.expressions)
 
@@ -287,7 +295,7 @@ class BodyParser(Parser):
                     printer.logging(f"Добавлено объявление переменной '{name}'", level="INFO")
 
                 case [Tokens.assign, name, Tokens.equal, *expr]:
-                    res_expr = self.execute_parse(MultiExpressionParser(expr.count(Tokens.left_bracket)), body, self.next_num_line(num))
+                    res_expr = self.execute_parse(MultiExpressionParser(count_real_left_bracket(expr)), body, self.next_num_line(num))
 
                     expr.extend(res_expr.expressions)
                     self.parse_assign(name, expr, line)
@@ -338,7 +346,7 @@ class BodyParser(Parser):
                     self.commands.append(Return(str(), Expression(str(), expr, self.info)))
                     printer.logging(f"Добавлена команда Return с выражением: {expr}", level="INFO")
                 case [Tokens.return_, *expr]:
-                    res_expr = self.execute_parse(MultiExpressionParser(expr.count(Tokens.left_bracket)), body, self.next_num_line(num))
+                    res_expr = self.execute_parse(MultiExpressionParser(count_real_left_bracket(expr)), body, self.next_num_line(num))
 
                     expr.extend(res_expr.expressions)
 
@@ -347,7 +355,7 @@ class BodyParser(Parser):
                     self.commands.append(Defer(str(), Expression(str(), expr, self.info)))
                     printer.logging(f"Добавлена команда Defer с выражением: {expr}", level="INFO")
                 case [Tokens.defer, *expr]:
-                    res_expr = self.execute_parse(MultiExpressionParser(expr.count(Tokens.left_bracket)), body, self.next_num_line(num))
+                    res_expr = self.execute_parse(MultiExpressionParser(count_real_left_bracket(expr)), body, self.next_num_line(num))
 
                     expr.extend(res_expr.expressions)
 
@@ -389,7 +397,7 @@ class BodyParser(Parser):
                     self.commands.append(ErrorThrow(str(), Expression(str(), expr, self.info)))
                     printer.logging("Парсинг тела завершен: 'ErrorThrow' найден", level="INFO")
                 case [Tokens.error, *expr]:
-                    res_expr = self.execute_parse(MultiExpressionParser(expr.count(Tokens.left_bracket)), body, self.next_num_line(num))
+                    res_expr = self.execute_parse(MultiExpressionParser(count_real_left_bracket(expr)), body, self.next_num_line(num))
 
                     expr.extend(res_expr.expressions)
 
@@ -415,7 +423,7 @@ class BodyParser(Parser):
                         self.parse_assign_override(expr, line, body, num)
                         continue
 
-                    res_expr = self.execute_parse(MultiExpressionParser(expr.count(Tokens.left_bracket)), body, self.next_num_line(num))
+                    res_expr = self.execute_parse(MultiExpressionParser(count_real_left_bracket(expr)), body, self.next_num_line(num))
 
                     expr.extend(res_expr.expressions)
                     self.commands.append(Expression(str(), expr, self.info))

@@ -9,6 +9,23 @@ from src.core.util import is_ignore_line
 from src.util.console_worker import printer
 
 
+def count_real_left_bracket(expr: list[str]) -> int:
+    is_string = False
+    count = 0
+
+    for symbol in expr:
+        if symbol == Tokens.quotation:
+            is_string = not is_string
+
+        if is_string:
+            continue
+
+        if symbol == Tokens.left_bracket:
+            count += 1
+
+    return count
+
+
 class MultiExpressionMetaObject(MetaObject):
     def __init__(
             self, stop_num: int, name: str,
@@ -49,14 +66,6 @@ class MultiExpressionParser(Parser):
             expressions=self.expressions,
             info=self.info
         )
-
-    @classmethod
-    def init_left_bracket(cls, expr: list[str]):
-        cls.left_bracket = expr.count(Tokens.left_bracket)
-
-    @classmethod
-    def set_default_left_bracket(cls):
-        cls.left_bracket = _DEFAULT_LEFT_BRACKET
 
     def clean_comma(self):
         if (
@@ -132,3 +141,5 @@ class MultiExpressionParser(Parser):
                     f"неравно внутри многострочного выражения",
                 info=self.info
             )
+
+        raise InvalidSyntaxError("Некорректное многострочное выражение.", info=self.info)
