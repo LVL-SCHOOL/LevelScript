@@ -197,6 +197,28 @@ class ViewNodesEntity(PyExtendWrapper):
         return VOID
 
 
+@builder.collect(func_name='получить_все_задачи')
+class GetAllTasks(PyExtendWrapper):
+    def __init__(self, func_name: str):
+        super().__init__(func_name)
+        self.empty_args = True
+        self.count_args = 0
+
+    def call(self, args: Optional[list[BaseAtomicType]] = None):
+        from src.core.background_task.schedule import get_task_scheduler
+        from src.core.types.atomic import Array
+
+        scheduler = get_task_scheduler()
+        tasks = set()
+
+        for thread in scheduler.threads:
+            with thread.lock:
+                for task in thread.tasks:
+                    tasks.add(task)
+
+        return Array(list(tasks))
+
+
 def build_module():
     builder.build_python_extend(f"{standard_lib_path}{MOD_NAME}")
 

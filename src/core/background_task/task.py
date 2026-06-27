@@ -57,6 +57,9 @@ class AbstractBackgroundTask(BaseAtomicType, ABC):
     @abstractmethod
     def result(self): ...
 
+    def __str__(self):
+        return f"Фоновая задача: '{self.name}' с идентификатором: '{self.id}'"
+
 
 class ProcedureBackgroundTask(AbstractBackgroundTask):
     def __init__(self,  name: str, executor: 'ProcedureExecutor'):
