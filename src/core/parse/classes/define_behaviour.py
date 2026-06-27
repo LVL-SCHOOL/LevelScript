@@ -31,6 +31,13 @@ class DefineBehaviourParser(DefineMethodParser):
                             f"Невозможно определить поведение '{behaviour_name}'",
                             info=self.info,
                         )
+
+                    if len(arguments) != 1:
+                        raise InvalidSyntaxError(
+                            f"Поведение должно иметь один аргумент в сигнатуре",
+                            info=self.info,
+                        )
+
                     self.parse_define_procedure(body, behaviour_name, arguments, num, self.info)
                     self.this  = this
                 case [Tokens.right_bracket]:
