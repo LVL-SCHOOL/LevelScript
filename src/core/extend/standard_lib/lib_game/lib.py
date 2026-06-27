@@ -147,16 +147,16 @@ class EventTable(PyExtendWrapper):
     def call(self, args: Optional[list[BaseAtomicType]] = None):
         import pygame
 
-        from src.core.extend.standard_lib.lib_game.util import GameEventType
+        from src.core.extend.standard_lib.lib_game.util import GameEventAtomicType
         from src.core.types.atomic import Table, String
 
         return Table({
-            String("Выход"): GameEventType(pygame.QUIT),
-            String("НажатиеКлавиши"): GameEventType(pygame.KEYDOWN),
-            String("ОтпусканиеКлавиши"): GameEventType(pygame.KEYUP),
-            String("НажатиеМыши"): GameEventType(pygame.MOUSEBUTTONDOWN),
-            String("ОтпусканиеМыши"): GameEventType(pygame.MOUSEBUTTONUP),
-            String("ДвижениеМыши"): GameEventType(pygame.MOUSEMOTION),
+            String("Выход"): GameEventAtomicType(pygame.QUIT),
+            String("НажатиеКлавиши"): GameEventAtomicType(pygame.KEYDOWN),
+            String("ОтпусканиеКлавиши"): GameEventAtomicType(pygame.KEYUP),
+            String("НажатиеМыши"): GameEventAtomicType(pygame.MOUSEBUTTONDOWN),
+            String("ОтпусканиеМыши"): GameEventAtomicType(pygame.MOUSEBUTTONUP),
+            String("ДвижениеМыши"): GameEventAtomicType(pygame.MOUSEMOTION),
         })
 
 

@@ -107,6 +107,19 @@ class Tokens(StrEnum):
     defer = "ОТЛОЖИТЬ"
     defer_1 = "ОТЛОЖЕННО"
 
+    behaviour = "ПОВЕДЕНИЕ"
+    behaviour_star = "УМНОЖЕНИЕ"
+    behaviour_div = "ДЕЛЕНИЕ"
+    behaviour_plus = "СЛОЖЕНИЕ"
+    behaviour_minus= "ВЫЧИТАНИЕ"
+    behaviour_exponentiation = "СТЕПЕНЬ"
+    behaviour_and = "И"
+    behaviour_or = "ИЛИ"
+    behaviour_greater = "БОЛЬШЕ"
+    behaviour_less = "МЕНЬШЕ"
+    behaviour_equal = "РАВНО"
+    behaviour_not_equal = "НЕРАВНО"
+
 
 class ServiceTokens(StrEnum):
     unary_minus = "{{%unary_minus%}}"
@@ -149,4 +162,9 @@ BOOL_OP_TOKENS: Final[set] = {
     Tokens.greater,
     *ALIASES_MAP.get(Tokens.bool_equal, []),
     *ALIASES_MAP.get(Tokens.bool_not_equal, []),
+}
+BEHAVIOURS_TOKENS = {
+    Tokens.behaviour_div, Tokens.behaviour_star, Tokens.behaviour_and, Tokens.behaviour_or,
+    Tokens.behaviour_minus, Tokens.behaviour_plus, Tokens.behaviour_exponentiation,
+    Tokens.behaviour_greater, Tokens.behaviour_less, Tokens.behaviour_equal, Tokens.behaviour_not_equal,
 }

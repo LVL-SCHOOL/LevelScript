@@ -21,7 +21,6 @@ class Procedure(CodeBlock):
 
         self.arguments_names = arguments_names
         self.default_arguments = default_arguments
-        self.default_arguments = default_arguments
         self.inf_args_name = inf_args_name
         self.is_inf_args = is_inf_args
         self.tree_variables: Optional[ScopeStack] = None
