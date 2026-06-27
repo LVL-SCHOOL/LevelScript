@@ -380,6 +380,24 @@ class ExpressionExecutor(Executor):
 
         return False
 
+    def handle_behaviours(self, operands: Operands, evaluate_stack: list, behaviour_name: str):
+        instance: ClassInstance = operands.left
+
+        if not isinstance(instance, ClassInstance):
+            return False
+
+        if behaviour_name not in instance.metadata.behaviours:
+            return False
+
+        behaviour = instance.metadata.behaviours[behaviour_name]
+        other_name = behaviour.arguments_names[0]
+        behaviour.tree_variables = ScopeStack()
+        behaviour.tree_variables.set(Variable(other_name, operands.right))
+
+        self.call_method(behaviour, evaluate_stack, instance)
+
+        return True
+
     def evaluate(self) -> Union[BaseAtomicType, Generator[BaseAtomicType, None, None]]:
         prepared_operations: list[Union[BaseAtomicType, Operator]] = self.prepare_operations()
         evaluate_stack: list[Union[AbstractBackgroundTask, BaseAtomicType, BaseType]] = []
@@ -502,6 +520,10 @@ class ExpressionExecutor(Executor):
                     continue
 
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_minus):
+                    continue
+
                 evaluate_stack.append(operands.atomic_type(operands.left.sub(operands.right)))
 
             elif operation.operator == Tokens.plus:
@@ -517,26 +539,50 @@ class ExpressionExecutor(Executor):
                     continue
 
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_plus):
+                    continue
+
                 evaluate_stack.append(operands.atomic_type(operands.left.add(operands.right)))
 
             elif operation.operator == Tokens.star:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_star):
+                    continue
+
                 evaluate_stack.append(operands.atomic_type(operands.left.mul(operands.right)))
 
             elif operation.operator == Tokens.div:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_div):
+                    continue
+
                 evaluate_stack.append(operands.atomic_type(operands.left.div(operands.right)))
 
             elif operation.operator == Tokens.exponentiation:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_exponentiation):
+                    continue
+
                 evaluate_stack.append(operands.atomic_type(operands.left.pow(operands.right)))
 
             elif operation.operator == Tokens.and_:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_and):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.and_(operands.right)))
 
             elif operation.operator == Tokens.or_:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_or):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.or_(operands.right)))
 
             elif operation.operator == Tokens.not_:
@@ -549,18 +595,34 @@ class ExpressionExecutor(Executor):
 
             elif operation.operator == Tokens.bool_equal:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_equal):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.eq(operands.right)))
 
             elif operation.operator == Tokens.bool_not_equal:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_not_equal):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.ne(operands.right)))
 
             elif operation.operator == Tokens.greater:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_greater):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.gt(operands.right)))
 
             elif operation.operator == Tokens.less:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_less):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.lt(operands.right)))
 
             elif operation.operator == ServiceTokens.unary_minus:

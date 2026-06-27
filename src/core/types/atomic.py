@@ -261,60 +261,61 @@ class Void(BaseAtomicType):
         return Tokens.void
 
 
-class CustomType(BaseAtomicType):
+class CustomAtomicType(BaseAtomicType):
     def __init__(self, value: Any = ...):
         super().__init__(value)
+        self.class_instance_type_name = self.type_name()
 
     def add(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.plus, self.type_name())
+        raise OperationError(Tokens.plus, self.class_instance_type_name)
 
     def sub(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.minus, self.type_name())
+        raise OperationError(Tokens.minus, self.class_instance_type_name)
 
     def neg(self):
-        raise OperationError(Tokens.minus, self.type_name())
+        raise OperationError(Tokens.minus, self.class_instance_type_name)
 
     def pos(self):
-        raise OperationError(Tokens.plus, self.type_name())
+        raise OperationError(Tokens.plus, self.class_instance_type_name)
 
     def mul(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.star, self.type_name())
+        raise OperationError(Tokens.star, self.class_instance_type_name)
 
     def div(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.div, self.type_name())
+        raise OperationError(Tokens.div, self.class_instance_type_name)
 
     def mod(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.percent, self.type_name())
+        raise OperationError(Tokens.percent, self.class_instance_type_name)
 
     def pow(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.exponentiation, self.type_name())
+        raise OperationError(Tokens.exponentiation, self.class_instance_type_name)
 
     def eq(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.bool_equal, self.type_name())
+        raise OperationError(Tokens.bool_equal, self.class_instance_type_name)
 
     def ne(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.bool_not_equal, self.type_name())
+        raise OperationError(Tokens.bool_not_equal, self.class_instance_type_name)
 
     def lt(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.less, self.type_name())
+        raise OperationError(Tokens.less, self.class_instance_type_name)
 
     def le(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.less, self.type_name())
+        raise OperationError(Tokens.less, self.class_instance_type_name)
 
     def gt(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.greater, self.type_name())
+        raise OperationError(Tokens.greater, self.class_instance_type_name)
 
     def ge(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.greater, self.type_name())
+        raise OperationError(Tokens.greater, self.class_instance_type_name)
 
     def and_(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.and_, self.type_name())
+        raise OperationError(Tokens.and_, self.class_instance_type_name)
 
     def or_(self, other: "BaseAtomicType"):
-        raise OperationError(Tokens.or_, self.type_name())
+        raise OperationError(Tokens.or_, self.class_instance_type_name)
 
     def not_(self):
-        raise OperationError(Tokens.not_, self.type_name())
+        raise OperationError(Tokens.not_, self.class_instance_type_name)
 
     def __str__(self) -> str:
         return Tokens.spec_type

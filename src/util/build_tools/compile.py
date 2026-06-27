@@ -303,13 +303,21 @@ class Compiler:
 
             compiled_obj.constructor = self.execute_compile(compiled_obj.constructor)
 
+            if compiled_obj.methods is None:
+                compiled_obj.methods = {}
+
+            if compiled_obj.behaviours is None:
+                compiled_obj.behaviours = {}
+
             for method_name, method in compiled_obj.methods.items():
                 method: Method = self.execute_compile(method)
                 method.name = method_name
                 compiled_obj.methods[method_name] = method
 
-            if compiled_obj.methods is None:
-                compiled_obj.methods = {}
+            for behaviour_name, behaviour in compiled_obj.behaviours.items():
+                behaviour: Method = self.execute_compile(behaviour)
+                behaviour.name = behaviour_name
+                compiled_obj.behaviours[behaviour_name] = behaviour
 
             if compiled_obj.parent is not None:
                 if compiled_obj.parent not in self.compiled:
@@ -632,13 +640,19 @@ class Compiler:
                 self.body_compile(compiled.constructor.body)
                 compiled.constructor.name = compiled.name
 
-                for method in compiled.methods.values():
+                if compiled.methods is None:
+                    compiled.methods = {}
+
+                if compiled.behaviours is None:
+                    compiled.behaviours = {}
+
+                for method in {
+                    **compiled.methods,
+                    **compiled.behaviours,
+                }.values():
                     if method.default_arguments is not None:
                         self.compile_default_args(method.default_arguments)
                     self.body_compile(method.body)
-
-                if compiled.methods is None:
-                    compiled.methods = {}
 
                 compiled.methods[compiled.constructor_name] = compiled.constructor
 
