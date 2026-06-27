@@ -34,7 +34,7 @@ class DefineBehaviourParser(DefineMethodParser):
 
                     if len(arguments) != 1:
                         raise InvalidSyntaxError(
-                            f"Поведение должно иметь один аргумент в сигнатуре",
+                            "Поведение должно иметь один аргумент в сигнатуре",
                             info=self.info,
                         )
 
