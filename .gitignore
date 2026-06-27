@@ -176,3 +176,4 @@ law_config.env
 gi_*
 .sonar/
 line_counter.py
+file_ex_rename.py

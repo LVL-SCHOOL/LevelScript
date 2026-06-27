@@ -67,6 +67,16 @@ def delete_end_expr_for_include_directive(directive: list[str]):
     return directive
 
 
+def _file_priority(filename: str) -> int:
+    if filename.endswith(f".{settings.compiled_postfix}"):
+        return 0
+    elif filename.endswith(f".{settings.py_extend_postfix}"):
+        return 1
+    elif filename.endswith(f".{settings.raw_postfix}"):
+        return 2
+    return 3
+
+
 class Preprocessor:
     def __init__(self):
         self.imports = set()
@@ -153,13 +163,13 @@ class Preprocessor:
                     if all(add_expr_conditions):
                         end = Tokens.end_expr
 
-                    line_ = Line(expr.strip() + end, num=offset+1, file=path)
+                    line_ = Line(expr.strip() + end, num=offset + 1, file=path)
                     line_.raw_line = line
                     code.append(line_)
 
                 continue
 
-            code.append(Line(line.strip(), num=offset+1, file=path))
+            code.append(Line(line.strip(), num=offset + 1, file=path))
 
         preprocessed = []
 
@@ -189,28 +199,31 @@ class Preprocessor:
                         kill_process(f"Модуль для включения не найден: '{dir_path}'")
 
                     try:
-                        checked_files = []
+                        checked_files = set()
 
-                        for filename in files: # noqa
+                        # Сортируем файлы по приоритету: compiled -> py_extend -> raw
+                        files.sort(key=_file_priority)
+
+                        for filename in files:
                             file_without_ext = os.path.splitext(filename)[0]
 
                             if file_without_ext in checked_files:
                                 continue
 
-                            if filename.endswith(f".{settings.compiled_postfix}"):  # Проверка на нужное расширение
+                            if filename.endswith(f".{settings.compiled_postfix}"):
                                 file_path = os.path.join(dir_path, filename)
                                 preprocessed.append(import_preprocess(file_path))
-                                checked_files.append(file_without_ext)
-                            elif filename.endswith(f".{settings.py_extend_postfix}"):  # Проверка на нужное расширение
+                                checked_files.add(file_without_ext)
+                            elif filename.endswith(f".{settings.py_extend_postfix}"):
                                 file_path = os.path.join(dir_path, filename)
                                 preprocessed.append(import_preprocess(file_path))
-                                checked_files.append(file_without_ext)
-                            elif filename.endswith(f".{settings.raw_postfix}"):  # Проверка на нужное расширение
+                                checked_files.add(file_without_ext)
+                            elif filename.endswith(f".{settings.raw_postfix}"):
                                 file_path = os.path.join(dir_path, filename)
                                 preprocessed.extend(self.preprocess(
                                     import_preprocess(file_path, byte_mode=False), file_path)
                                 )
-                                checked_files.append(file_without_ext)
+                                checked_files.add(file_without_ext)
 
                     except RecursionError:
                         kill_process(

@@ -37,8 +37,8 @@ WORKING_DIR = get_working_directory()
 class Settings(BaseSettings):
     debug: bool = Field(default=False)
     max_recursion_depth: int = Field(default=10_000)
-    raw_postfix: str = Field(default="raw")
-    compiled_postfix: str = Field(default="law")
+    raw_postfix: str = Field(default="law")
+    compiled_postfix: str = Field(default="lawc")
     py_extend_postfix: str = Field(default="pyl")
     max_running_threads_tasks: int = Field(
         default=_MAX_THREAD_SUGGESTED,

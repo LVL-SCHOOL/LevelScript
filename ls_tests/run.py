@@ -6,18 +6,18 @@ from src.util.build_tools.starter import run_file
 
 
 def extract_number(filename):
-    match = re.search(r'test_(\d+)\.raw', filename)
+    match = re.search(r'test_(\d+)\.law', filename)
     return int(match.group(1)) if match else 0
 
 
 path = os.path.join(os.getcwd(), "")
 test_num = 0
 
-files = [f for f in os.listdir(".") if f.startswith("test_") and f.endswith(".raw")]
+files = [f for f in os.listdir(".") if f.startswith("test_") and f.endswith(".law")]
 files.sort(key=extract_number)  # Сортируем по числовому значению
 
 for file in files:
-    if file.startswith("test") and file.endswith(".raw"):
+    if file.startswith("test") and file.endswith(".law"):
         test_num += 1
 
         print(f"#{test_num}: Запуск файла: {file}")
