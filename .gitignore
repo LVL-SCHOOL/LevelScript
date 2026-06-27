@@ -175,3 +175,4 @@ law_config.env
 
 gi_*
 .sonar/
+line_counter.py
