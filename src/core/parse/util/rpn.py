@@ -139,7 +139,7 @@ def check_correct_expr(expr: list[str]):
                 res_expr = " ".join(str(i) for i in expr)
                 raise InvalidExpression(
                     f"В выражении: '{res_expr}' не может быть оператора: '{op}'\n"
-                    f"\n{res_expr}\n{" " * (sum(len(t) for o, t in enumerate(res_expr) if o < res_expr.index(op)))}^\n"
+                    f"\n{res_expr}\n{' ' * (sum(len(t) for o, t in enumerate(res_expr) if o < res_expr.index(op)))}^\n"
                 )
 
     count_double_comma = 0
@@ -356,7 +356,7 @@ def _build_rpn(expr: list[str]) -> list[Union[Operator, BaseAtomicType]]:
 
                             target_comma = (
                                 f"{err_expr}\n"
-                                f"{" " * (sum(len(t) for o, t in enumerate(sub_expr) if o < offset_ - 1))}^"
+                                f"{' ' * (sum(len(t) for o, t in enumerate(sub_expr) if o < offset_ - 1))}^"
                             )
 
                             raise InvalidExpression(

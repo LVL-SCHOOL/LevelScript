@@ -96,7 +96,7 @@ class BodyParser(Parser):
     def parse_assign(self, name: str, expr: list, line: list[str]):
         if not expr:
             raw_expr = " ".join(line)
-            arrow = f"\n\n\n{raw_expr}\n{" " * (len(raw_expr) - 2) + "^"}\n\n"
+            arrow = f"\n\n\n{raw_expr}\n{' ' * (len(raw_expr) - 2) + '^'}\n\n"
 
             raise InvalidSyntaxError(
                 f"{arrow}Отсутствует выражение для переменной: '{name}'",
@@ -180,7 +180,7 @@ class BodyParser(Parser):
             if is_string:
                 continue
 
-            if token not in Tokens and not any([is_float(token), is_integer(token), is_identifier(token)]):
+            if token not in list(Tokens) and not any([is_float(token), is_integer(token), is_identifier(token)]):
                 raise InvalidSyntaxError(
                     f"Ошибка синтаксиса. Недопустимый токен: '{token}'", info=self.info
                 )

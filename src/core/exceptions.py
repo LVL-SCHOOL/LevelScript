@@ -120,7 +120,7 @@ class BaseError(Exception):
             msg = "Ошибка."
 
         if line is not None:
-            msg = f"{msg} Строка: '{" ".join(line)}'"
+            msg = f"{msg} Строка: '{' '.join(line)}'"
 
         if info is not None:
             msg = f"{msg}\n\nФайл: {info.file}, Номер строки: {info.num}, Строка: {info.raw_line}"
@@ -272,7 +272,7 @@ class InvalidType(BaseError):
             msg = f"Значение: '{value}' должно иметь тип: '{type_}'!"
 
         if line is not None:
-            msg = f"Ошибка в строке: '{" ".join(line)} ' \n{msg}"
+            msg = f"Ошибка в строке: '{' '.join(line)} ' \n{msg}"
 
         super().__init__(msg, info=info)
 

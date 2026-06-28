@@ -125,7 +125,7 @@ class DefineProcedureParser(Parser):
                             next_tok = default[default_offset + 1]
                             sep = ""
 
-                            if next_tok == " " or next_tok in Tokens and not is_string:
+                            if next_tok == " " or next_tok in list(Tokens) and not is_string:
                                 sep = " "
 
                             default_arguments_expressions[-1] += sep

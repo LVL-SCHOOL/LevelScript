@@ -448,7 +448,7 @@ class Compiler:
 
         # Обработка операторов и процедур
         for offset, op in enumerate(raw):
-            if not (op not in Tokens and op in self.compiled):
+            if not (op not in list(Tokens) and op in self.compiled):
                 continue
 
             command = self.compiled[op]

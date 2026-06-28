@@ -31,7 +31,7 @@ class Lexer:
         tokens = []
 
         for token in separated_line:
-            if token in Tokens:
+            if token in list(Tokens):
                 tokens.append(token)
                 continue
 
@@ -75,15 +75,15 @@ class Lexer:
         else:
             raise InvalidSyntaxError(
                 f"Некорректная строка: '{line.raw_data}', возможно Вы забыли один из этих знаков в конце: "
-                f"{", ".join([f"'{s}'" for s in END_LINE_TOKENS])}\n\n"
-                f"{line.raw_data}\n{" " * len(line.raw_data)}^\n\n",
+                f"{', '.join([f'{s}' for s in END_LINE_TOKENS])}\n\n"
+                f"{line.raw_data}\n{' ' * len(line.raw_data)}^\n\n",
                 info=line.get_file_info()
             )
 
     @staticmethod
     def _check_tokens(tokens: list[str], info: Info):
         for token in tokens:
-            if token in ServiceTokens:
+            if token in list(ServiceTokens):
                 raise InvalidSyntaxError(
                     f"Ошибка синтаксиса. Недопустимый токен: '{token}'", info=info
                 )
