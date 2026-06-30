@@ -4,7 +4,7 @@ from pathlib import Path
 
 from config import settings, WORKING_DIR, global_storage
 from src.core.background_task.schedule import get_task_scheduler
-from src.core.call_func_stack import get_stack_pretty_str
+from src.core.call_func_stack import get_stack_pretty_str, draw_pretty_stack_err
 from src.core.exceptions import BaseError
 from src.core.tokens import Tokens
 from src.core.types.execute_block import ExecuteBlock
@@ -58,13 +58,7 @@ class Law:
             if settings.debug:
                 raise
 
-            stack_trace = get_stack_pretty_str()
-
-            if stack_trace:
-                stack_trace += "\n"
-
-            kill_process(f"{stack_trace}{str(e)}")
-
+            draw_pretty_stack_err(e)
         except KeyboardInterrupt:
             get_task_scheduler().shutdown()
 
@@ -72,12 +66,7 @@ class Law:
             if settings.debug:
                 raise
 
-            stack_trace = get_stack_pretty_str()
-
-            if stack_trace:
-                stack_trace += "\n"
-
-            printer.print_error(f"{stack_trace}{str(e)}")
+            draw_pretty_stack_err(e)
         else:
             success_process(f"Операция {command} завершена успешно.")
         finally:
@@ -133,7 +122,7 @@ class Law:
 
 if __name__ == '__main__':
     law = Law()
-    law.run()
-    # file = "ls_tests\\test_103.law"
-    # run_file(file)
+    # law.run()
+    file = "ls_tests\\test_106.law"
+    run_file(file)
     # build(file)
