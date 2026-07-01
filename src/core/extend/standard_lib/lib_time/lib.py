@@ -64,6 +64,7 @@ class BackgroundSleep(PyExtendWrapper):
         super().__init__(func_name)
         self.empty_args = False
         self.count_args = 1
+        self.is_async = True
 
     def call(self, args: Optional[list[BaseAtomicType]] = None):
         from threading import Lock
@@ -124,6 +125,12 @@ class BackgroundSleep(PyExtendWrapper):
             def result(self, value: BaseAtomicType):
                 with self._lock:
                     self._result = value
+
+            def stop(self):
+                with self._lock:
+                    if self._gen_sleep is not None:
+                        self._gen_sleep.close()
+                        self._done = True
 
         return SleepTask()
 

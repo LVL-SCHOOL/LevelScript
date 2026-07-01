@@ -284,6 +284,9 @@ class BodyExecutor(Executor):
                 with VariableContextCreator(self.tree_variables):
                     body_executor = BodyExecutor(command.body, self.tree_variables, self.compiled)
 
+                    if not body_executor.body.commands:
+                        continue
+
                     for var in range(result_from.value, result_to.value + 1):
                         if self.async_mode:
                             yield YIELD
