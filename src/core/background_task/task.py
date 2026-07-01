@@ -1,5 +1,4 @@
 import os
-import time
 from abc import ABC, abstractmethod
 from concurrent.futures.thread import ThreadPoolExecutor
 from threading import Lock
@@ -62,6 +61,9 @@ class AbstractBackgroundTask(BaseAtomicType, ABC):
     @abstractmethod
     def result(self): ...
 
+    @abstractmethod
+    def stop(self): ...
+
     def __str__(self):
         return f"Фоновая задача: '{self.name}' с идентификатором: '{self.id}'"
 
@@ -105,23 +107,32 @@ class ProcedureBackgroundTask(AbstractBackgroundTask):
             self._current_result = e.value
             return
 
+    def stop(self):
+        with self._procedure_lock:
+            if self._generator is not None:
+                self._generator.close()
+                self._generator = None
+                self._done = True
+                self._current_result = None
+
     def __repr__(self):
         return f'<ProcedureBackgroundTask name={str(self)} {self.executor=}, {self._current_result=}, {self._done=}>'
 
 
-_coef = 4
-_thread_pool = ThreadPoolExecutor(max(1, os.cpu_count() // _coef))
+_thread_pool = ThreadPoolExecutor(max(1, (os.cpu_count() * settings.wrapper_thread_pool_pct) // 100))
 
 
 class NativePythonFuncThreadBackgroundTask(AbstractBackgroundTask):
     def __init__(self, name: str, function: Callable, *args, **kwargs):
         super().__init__(name, VOID)
         self.function = function
+        self.bg_function = None
         self.args = args
         self.kwargs = kwargs
         self._generator = self._generator_wrap()
         self._current_result = None
         self._done = False
+        self._cancelled = False
         self._function_lock = Lock()
 
     @property
@@ -143,20 +154,28 @@ class NativePythonFuncThreadBackgroundTask(AbstractBackgroundTask):
             self._current_result = value
 
     def _generator_wrap(self):
-        bg_function = _thread_pool.submit(
+        self.bg_function = _thread_pool.submit(
             self.function,
             *self.args,
             **self.kwargs
         )
 
-        while not bg_function.done():
+        while not self.bg_function.done() and not self._cancelled:
             yield YIELD
 
-        self._current_result = bg_function.result()
+        self._current_result = self.bg_function.result()
+
         return
 
     def next_command(self):
         return self._generator
+
+    def stop(self):
+        with self._function_lock:
+            self._cancelled = True
+
+            if self.bg_function is not None:
+                self.bg_function.cancel()
 
     def __repr__(self):
         return f'<NativePythonFuncThreadBackgroundTask name={str(self)}, {self._current_result=}, {self._done=}>'

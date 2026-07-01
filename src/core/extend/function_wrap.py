@@ -25,6 +25,7 @@ class PyExtendWrapper(BaseType, ABC):
         self.offset_required_args = -1
         self.namespace: Optional['Compiled'] = None
         self.signature: tuple[Union[Type[BaseAtomicType], Type[Procedure]]] = tuple()
+        self.is_async = False
 
     @abstractmethod
     def call(self, args: Optional[list[BaseAtomicType]] = None) -> BaseAtomicType: ...

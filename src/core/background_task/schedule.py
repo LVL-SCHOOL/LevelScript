@@ -41,7 +41,14 @@ class ThreadWorker:
         warn = ""
 
         for task in self.tasks:
-            warn += f"Задача [{task.id}] '{task.name}' не была завершена корректно!\n"
+            warn += f"Задача [{task.id}] '{task.name}' не была завершена корректно!"
+
+            try:
+                task.stop()
+            except Exception as e:
+                warn = f"{warn} Детали: '{str(e)}'"
+            finally:
+                warn += "\n"
 
         if warn:
             printer.print_warning(warn.rstrip(), self.thread.name)
@@ -59,6 +66,13 @@ class ThreadWorker:
             task.done = True
             self.tasks.remove(task)
             printer.logging(f"{self.thread=} Завершил задачу {task.name=} {task.id=}")
+
+    @staticmethod
+    def error_handle(task: AbstractBackgroundTask, err: BaseError):
+        task.is_error_result = True
+        task.error = err
+
+        printer.print_warning(f"Во время работы фоновой задачи '{task.name}' произошла ошибка: '{str(err)}'")
 
     def _work(self):
         while not self._stop_event.is_set():
@@ -107,19 +121,12 @@ class ThreadWorker:
                     self.done_task(task)
                 except BaseError as e:
                     task.result = create_law_script_exception_class_instance(e.exc_name, e)
-                    task.is_error_result = True
-                    task.error = e
                     self.done_task(task)
+                    self.error_handle(task, e)
                 except Exception as e:
                     task.result = VOID
                     self.done_task(task)
-
-                    err_message = (
-                        f"{self.thread.name}: Ошибка при выполнении задачи: [{task.id}] '{task.name}'."
-                        f"\n\nДетали: {e}"
-                    )
-
-                    printer.print_error(err_message)
+                    self.error_handle(task, BaseError(str(e)))
                 finally:
                     task.is_active = False
 

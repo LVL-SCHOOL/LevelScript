@@ -5,7 +5,7 @@ from pathlib import Path
 
 from src.core.extend.function_wrap import PyExtendWrapper, PyExtendBuilder
 from src.core.extend.standard_lib.lib_web.util import HTTPRequestHandler, Server
-from src.core.types.atomic import String, Number, Table, Array
+from src.core.types.atomic import String, Number, Table, Array, convert_atomic_type_to_py_type
 from src.core.types.basetype import BaseAtomicType
 
 builder = PyExtendBuilder()
@@ -19,7 +19,7 @@ class Request(PyExtendWrapper):
         super().__init__(func_name)
         self.empty_args = False
         self.offset_required_args = 3
-        self.count_args = 5
+        self.count_args = 6
 
     def call(self, args: Optional[list[BaseAtomicType]] = None):
         import json
@@ -31,6 +31,7 @@ class Request(PyExtendWrapper):
 
         headers = Table()
         cookies = Table()
+        timeout = Number(30)
 
         if len(args) == self.offset_required_args:
             method, url, data = args
@@ -41,6 +42,10 @@ class Request(PyExtendWrapper):
 
             if len(tail) == 2:
                 cookies = tail[1]
+
+            elif len(tail) == 3:
+                cookies = tail[1]
+                timeout = tail[2]
 
         if not isinstance(method, String):
             raise ErrorType(f"Первый аргумент должен иметь тип '{String.type_name()}'!")
@@ -58,7 +63,7 @@ class Request(PyExtendWrapper):
             raise ErrorType(f"Пятый аргумент должен иметь тип '{Table.type_name()}'!")
 
         method, url, data, *_ = self.parse_args(args)
-        headers, cookies = self.parse_args([headers, cookies])
+        headers, cookies, timeout = [convert_atomic_type_to_py_type(arg) for arg in [headers, cookies, timeout]]
 
         methods_map = {
             "GET",
@@ -76,7 +81,7 @@ class Request(PyExtendWrapper):
            )
 
         try:
-            resp = requests.request(method, url, data=data, headers=headers, cookies=cookies)
+            resp = requests.request(method, url, data=data, headers=headers, cookies=cookies, timeout=timeout)
         except requests.exceptions.RequestException as e:
             raise HttpError(msg=f"При запросе произошла ошибка. Детали: '{e}'")
 

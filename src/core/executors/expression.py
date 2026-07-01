@@ -3,7 +3,11 @@ from typing import Union, NamedTuple, Type, Optional, TYPE_CHECKING, Callable, G
 
 from config import settings
 from src.core.background_task.schedule import get_task_scheduler
-from src.core.background_task.task import ProcedureBackgroundTask, AbstractBackgroundTask
+from src.core.background_task.task import (
+    ProcedureBackgroundTask,
+    AbstractBackgroundTask,
+    NativePythonFuncThreadBackgroundTask
+)
 from src.core.call_func_stack import call_func_stack_builder
 from src.core.exceptions import (
     ErrorType,
@@ -353,7 +357,7 @@ class ExpressionExecutor(Executor):
             args=args
         )
 
-    def call_py_extend_procedure(self, py_extend_procedure, args, evaluate_stack: list[Union[BaseAtomicType, PyExtendWrapper]]):
+    def call_py_extend_procedure(self, py_extend_procedure, args):
         try:
             py_extend_procedure.check_args(args)
             result = py_extend_procedure.call(args)
@@ -366,7 +370,7 @@ class ExpressionExecutor(Executor):
                 info=self.expression.meta_info
             )
 
-        evaluate_stack.append(result)
+        return result
 
     @staticmethod
     def handle_in_background(operation, prepared_operations, offset, evaluate_stack):
@@ -478,7 +482,8 @@ class ExpressionExecutor(Executor):
                     if call_metadata.procedure is not None:
                         call_func_stack_builder.push(func_name=operation.name, meta_info=self.expression.meta_info)
                         try:
-                            self.call_py_extend_procedure(call_metadata.procedure, call_metadata.args, evaluate_stack)
+                            result = self.call_py_extend_procedure(call_metadata.procedure, call_metadata.args)
+                            evaluate_stack.append(result)
                         finally:
                             call_func_stack_builder.pop()
 
@@ -680,8 +685,18 @@ class ExpressionExecutor(Executor):
                     call_metadata = self.init_py_extend_procedure_context(func, evaluate_stack)
 
                     if call_metadata.procedure is not None:
+                        if not func.is_async:
+                            background_task = NativePythonFuncThreadBackgroundTask(
+                                func.name, self.call_py_extend_procedure,
+                                call_metadata.procedure, call_metadata.args
+                            )
+                            self.task_scheduler.schedule_task(background_task)
+                            evaluate_stack.append(background_task)
+                            continue
+
                         call_func_stack_builder.push(func_name=operation.name, meta_info=self.expression.meta_info)
-                        self.call_py_extend_procedure(call_metadata.procedure, call_metadata.args, evaluate_stack)
+                        result = self.call_py_extend_procedure(call_metadata.procedure, call_metadata.args)
+                        evaluate_stack.append(result)
                         call_func_stack_builder.pop()
 
                         background_task = evaluate_stack.pop(-1)

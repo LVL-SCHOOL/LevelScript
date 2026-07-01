@@ -163,7 +163,7 @@ def check_correct_expr(expr: list[str]):
             continue
 
         next_token_checker = NEXT_TOKEN_CHECKERS.get(current_op, check_default)
-        next_token_checker(expr, current_op, offset)
+        next_token_checker([str(item) for item in expr], current_op, offset)
 
 
 def prepare_expr(expr: list[str]) -> list:

@@ -110,6 +110,6 @@ class AsyncHTTPServerImpl(HTTPServer):
     def process_request(self, request, client_address):
         get_task_scheduler().schedule_task(
             NativePythonFuncThreadBackgroundTask(
-                "обработчик_интертнет_запроса", self.process_request_task, request, client_address
+                "обработчик_интернет_запроса", self.process_request_task, request, client_address
             )
         )

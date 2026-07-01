@@ -45,6 +45,11 @@ class Settings(BaseSettings):
         ge=1,
         le=_MAX_THREAD_SAFE
     )
+    wrapper_thread_pool_pct: int = Field(
+        default=25,
+        ge=1,
+        le=100,
+    )
     task_on_thread_step: int = Field(default=2)
     ttl_thread: float = Field(default=2)
     ttl_check_free_tasks: float = Field(default=0.5)
