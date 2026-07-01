@@ -3,6 +3,7 @@ from typing import Optional
 from pathlib import Path
 
 from src.core.extend.function_wrap import PyExtendWrapper, PyExtendBuilder
+from src.core.types.atomic import Table
 from src.core.types.basetype import BaseAtomicType
 from src.core.types.code_block import CodeBlock
 
@@ -217,6 +218,18 @@ class GetAllTasks(PyExtendWrapper):
                     tasks.add(task)
 
         return Array(list(tasks))
+
+
+@builder.collect(func_name='_контекст')
+class GetContext(PyExtendWrapper):
+    def __init__(self, func_name: str):
+        super().__init__(func_name)
+        self.empty_args = True
+        self.count_args = 0
+        self._context = Table()
+
+    def call(self, args: Optional[list[BaseAtomicType]] = None):
+        return self._context
 
 
 def build_module():

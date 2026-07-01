@@ -6,6 +6,7 @@ import dill
 
 from config import settings
 from src.core.exceptions import BaseError, ArgumentError, ErrorType
+from src.core.parse.base import is_identifier
 from src.core.types.atomic import convert_atomic_type_to_py_type, VOID
 from src.core.types.basetype import BaseAtomicType, BaseType
 from src.core.types.line import Info
@@ -160,6 +161,9 @@ class PyExtendBuilder:
                 raise ValueError(
                     "Длина сигнатуры и кол-во аргументов должны быть равны. Либо сигнатура должна быть пуста!"
                 )
+
+            if not is_identifier(func_name):
+                raise ValueError(f"Название процедуры: '{func_name}' имеет недопустимые символы!")
 
             self.wrappers.append(instance_py_wrapper)
 
