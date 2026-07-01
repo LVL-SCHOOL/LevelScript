@@ -1,5 +1,4 @@
 import os
-import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from socketserver import ThreadingMixIn
@@ -73,6 +72,19 @@ class HTTPRequest(CustomAtomicType):
     @classmethod
     def type_name(cls):
         return "HTTPЗапрос"
+
+
+class HTTPDriver(CustomAtomicType):
+    def __init__(self, driver: Type[HTTPServer]):
+        super().__init__()
+        self.driver = driver
+
+    def __str__(self) -> str:
+        return f"HTTP Движок(движок={self.driver})"
+
+    @classmethod
+    def type_name(cls):
+        return "HTTPДвижок"
 
 
 class ThreadPoolHTTPServerImpl(ThreadingMixIn, HTTPServer):

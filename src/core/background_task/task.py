@@ -133,7 +133,7 @@ class NativePythonFuncThreadBackgroundTask(AbstractBackgroundTask):
         self._current_result = None
         self._done = False
         self._cancelled = False
-        self._function_lock = Lock()
+        self._lock = Lock()
 
     @property
     def done(self):
@@ -141,7 +141,7 @@ class NativePythonFuncThreadBackgroundTask(AbstractBackgroundTask):
 
     @done.setter
     def done(self, value: bool):
-        with self._function_lock:
+        with self._lock:
             self._done = value
 
     @property
@@ -150,7 +150,7 @@ class NativePythonFuncThreadBackgroundTask(AbstractBackgroundTask):
 
     @result.setter
     def result(self, value):
-        with self._function_lock:
+        with self._lock:
             self._current_result = value
 
     def _generator_wrap(self):
@@ -171,7 +171,7 @@ class NativePythonFuncThreadBackgroundTask(AbstractBackgroundTask):
         return self._generator
 
     def stop(self):
-        with self._function_lock:
+        with self._lock:
             self._cancelled = True
 
             if self.bg_function is not None:

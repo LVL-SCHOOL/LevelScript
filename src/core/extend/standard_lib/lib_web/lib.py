@@ -4,7 +4,7 @@ from typing import Optional
 from pathlib import Path
 
 from src.core.extend.function_wrap import PyExtendWrapper, PyExtendBuilder
-from src.core.extend.standard_lib.lib_web.util import HTTPRequestHandler, Server
+from src.core.extend.standard_lib.lib_web.util import HTTPRequestHandler, Server, HTTPDriver
 from src.core.types.atomic import String, Number, Table, Array, convert_atomic_type_to_py_type
 from src.core.types.basetype import BaseAtomicType
 
@@ -104,20 +104,45 @@ class Request(PyExtendWrapper):
         return result
 
 
+@builder.collect(func_name='многопоточный_серверный_движок')
+class CreateServer(PyExtendWrapper):
+    def __init__(self, func_name: str):
+        super().__init__(func_name)
+        self.count_args = 0
+        self.empty_args = True
+
+    def call(self, args: Optional[list[BaseAtomicType]] = None):
+        from src.core.extend.standard_lib.lib_web.util import ThreadPoolHTTPServerImpl
+
+        return HTTPDriver(ThreadPoolHTTPServerImpl)
+
+
+@builder.collect(func_name='асинхронный_серверный_движок')
+class CreateServer(PyExtendWrapper):
+    def __init__(self, func_name: str):
+        super().__init__(func_name)
+        self.count_args = 0
+        self.empty_args = True
+
+    def call(self, args: Optional[list[BaseAtomicType]] = None):
+        from src.core.extend.standard_lib.lib_web.util import AsyncHTTPServerImpl
+
+        return HTTPDriver(AsyncHTTPServerImpl)
+
+
 @builder.collect(func_name='создать_сервер')
 class CreateServer(PyExtendWrapper):
     def __init__(self, func_name: str):
         super().__init__(func_name)
-        self.count_args = 3
-        self.signature = (String, Number, HTTPRequestHandler)
+        self.count_args = 4
+        self.signature = (String, Number, HTTPRequestHandler, HTTPDriver)
 
     def call(self, args: Optional[list[BaseAtomicType]] = None):
-        from src.core.extend.standard_lib.lib_web.util import ThreadPoolHTTPServerImpl, AsyncHTTPServerImpl
         from src.core.extend.standard_lib.lib_web.util import Server
 
-        host, port, handler = args
+        host, port, handler, driver = args
 
-        return Server(AsyncHTTPServerImpl((host.value, port.value), handler.handler))
+        return Server(driver.driver((host.value, port.value), handler.handler))
 
 
 @builder.collect(func_name='запустить_сервер')
