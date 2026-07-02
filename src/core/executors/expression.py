@@ -666,6 +666,7 @@ class ExpressionExecutor(Executor):
                 wait_count = 0
                 while not task.done:
                     if wait_count % settings.step_task_size_to_sleep == 0:
+                        wait_count = 0
                         time.sleep(settings.task_thread_switch_interval)
                     else:
                         yield YIELD

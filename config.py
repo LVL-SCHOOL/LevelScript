@@ -67,7 +67,6 @@ class Settings(BaseSettings):
                 "позволяя превращать правовые нормы в исполняемый код."
     )
 
-
     @field_validator("std_name")
     def validate_std_name(cls, value: str) -> str:
         if not value.strip():
