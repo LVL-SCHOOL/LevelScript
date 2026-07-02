@@ -126,9 +126,13 @@ class NativePythonFuncThreadBackgroundTask(AbstractBackgroundTask):
     def __init__(self, name: str, function: Callable, *args, **kwargs):
         super().__init__(name, VOID)
         self.function = function
-        self.bg_function = None
         self.args = args
         self.kwargs = kwargs
+        self.bg_function = _thread_pool.submit(
+            self.function,
+            *self.args,
+            **self.kwargs
+        )
         self._generator = self._generator_wrap()
         self._current_result = None
         self._done = False
@@ -154,12 +158,6 @@ class NativePythonFuncThreadBackgroundTask(AbstractBackgroundTask):
             self._current_result = value
 
     def _generator_wrap(self):
-        self.bg_function = _thread_pool.submit(
-            self.function,
-            *self.args,
-            **self.kwargs
-        )
-
         while not self.bg_function.done() and not self._cancelled:
             yield YIELD
 
@@ -173,9 +171,7 @@ class NativePythonFuncThreadBackgroundTask(AbstractBackgroundTask):
     def stop(self):
         with self._lock:
             self._cancelled = True
-
-            if self.bg_function is not None:
-                self.bg_function.cancel()
+            self.bg_function.cancel()
 
     def __repr__(self):
         return f'<NativePythonFuncThreadBackgroundTask name={str(self)}, {self._current_result=}, {self._done=}>'

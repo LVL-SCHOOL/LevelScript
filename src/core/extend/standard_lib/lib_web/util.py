@@ -87,8 +87,12 @@ class HTTPDriver(CustomAtomicType):
         return "HTTPДвижок"
 
 
-class ThreadPoolHTTPServerImpl(ThreadingMixIn, HTTPServer):
+class ConfigServerMixIn:
     allow_reuse_address = True
+    request_queue_size = 128
+
+
+class ThreadPoolHTTPServerImpl(ThreadingMixIn, ConfigServerMixIn, HTTPServer):
     daemon_threads = True
 
     def __init__(self, *args, max_workers=os.cpu_count(), **kwargs):
@@ -103,13 +107,12 @@ class ThreadPoolHTTPServerImpl(ThreadingMixIn, HTTPServer):
         )
 
 
-class AsyncHTTPServerImpl(HTTPServer):
-    allow_reuse_address = True
-    request_queue_size = 128
-
+class SyncHTTPServerImpl(ConfigServerMixIn, HTTPServer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+
+class AsyncHTTPServerImpl(SyncHTTPServerImpl):
     def process_request_task(self, request, client_address):
         try:
             self.finish_request(request, client_address)
