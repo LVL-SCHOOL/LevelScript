@@ -5,7 +5,7 @@ from src.core.parse.base import MetaObject
 from src.core.util import kill_process
 from src.util.build_tools.ast import AbstractSyntaxTreeBuilder
 from src.util.build_tools.compile import Compiler, Compiled
-from src.util.build_tools.interpreter import Interpreter
+from src.interpreter import Interpreter
 from src.util.build_tools.preprocessing import Preprocessor
 
 
