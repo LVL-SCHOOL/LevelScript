@@ -81,12 +81,11 @@ class PyExtendWrapper(BaseType, ABC):
                     f"но передано: {len(args)}"
                 )
 
-        elif self.count_args != -1:
-            if len(args) != self.count_args:
-                raise ArgumentError(
-                    f"Неверное количество аргументов процедуры '{self.func_name}'. Ожидалось: {self.count_args}, "
-                    f"но передано: {len(args)}"
-                )
+        elif self.count_args != -1 and len(args) != self.count_args:
+            raise ArgumentError(
+                f"Неверное количество аргументов процедуры '{self.func_name}'. Ожидалось: {self.count_args}, "
+                f"но передано: {len(args)}"
+            )
 
         if not self.signature:
             return

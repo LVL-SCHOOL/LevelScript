@@ -1,7 +1,5 @@
 from typing import Type, Union
 
-from click import command
-
 from config import settings
 from src.core.exceptions import (
     NameNotDefine,
@@ -30,7 +28,6 @@ from src.core.types.hypothesis import Hypothesis
 from src.core.types.objects import Object
 from src.core.types.obligations import Obligation
 from src.core.types.laws import Law
-from src.core.types.operation import Operator
 from src.core.types.procedure import (
     Procedure,
     CodeBlock,
