@@ -2,6 +2,8 @@ import re
 import time
 import os
 
+from config import settings
+from src.core.background_task.schedule import get_task_scheduler
 from src.util.build_tools.starter import run_file
 
 
@@ -28,3 +30,5 @@ for file in files:
 
         print(f"Тест #{test_num}: Время выполнения: {st1 - st0}")
         print(f"Тест #{test_num} успешно завершен")
+
+        get_task_scheduler().shutdown()
