@@ -34,6 +34,7 @@ class GlobalStorage:
 global_storage = GlobalStorage()
 WORKING_DIR = get_working_directory()
 
+
 class Settings(BaseSettings):
     debug: bool = Field(default=False)
     max_recursion_depth: int = Field(default=10_000)
@@ -52,7 +53,7 @@ class Settings(BaseSettings):
     )
     task_on_thread_step: int = Field(default=2)
     ttl_thread: float = Field(default=2)
-    ttl_check_free_tasks: float = Field(default=0.5)
+    ttl_check_free_tasks: float = Field(default=0.05)
     wait_task_time: float = Field(default=.001)
     std_name: str = Field(default="стандартная_библиотека")
     standard_lib_path_postfix: str = Field(default="/core/extend/standard_lib/modules")

@@ -123,6 +123,6 @@ class Law:
 if __name__ == '__main__':
     law = Law()
     law.run()
-    # file = "ls_tests\\test_106.law"
+    # file = "ls_tests\\test_109.law"
     # run_file(file)
     # build(file)

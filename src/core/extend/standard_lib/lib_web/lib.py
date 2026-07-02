@@ -105,7 +105,7 @@ class Request(PyExtendWrapper):
 
 
 @builder.collect(func_name='многопоточный_серверный_движок')
-class CreateServer(PyExtendWrapper):
+class CreateThreadServer(PyExtendWrapper):
     def __init__(self, func_name: str):
         super().__init__(func_name)
         self.count_args = 0
@@ -118,7 +118,7 @@ class CreateServer(PyExtendWrapper):
 
 
 @builder.collect(func_name='асинхронный_серверный_движок')
-class CreateServer(PyExtendWrapper):
+class CreateAsyncServer(PyExtendWrapper):
     def __init__(self, func_name: str):
         super().__init__(func_name)
         self.count_args = 0
@@ -128,6 +128,19 @@ class CreateServer(PyExtendWrapper):
         from src.core.extend.standard_lib.lib_web.util import AsyncHTTPServerImpl
 
         return HTTPDriver(AsyncHTTPServerImpl)
+
+
+@builder.collect(func_name='синхронный_серверный_движок')
+class CreateSyncServer(PyExtendWrapper):
+    def __init__(self, func_name: str):
+        super().__init__(func_name)
+        self.count_args = 0
+        self.empty_args = True
+
+    def call(self, args: Optional[list[BaseAtomicType]] = None):
+        from src.core.extend.standard_lib.lib_web.util import SyncHTTPServerImpl
+
+        return HTTPDriver(SyncHTTPServerImpl)
 
 
 @builder.collect(func_name='создать_сервер')
