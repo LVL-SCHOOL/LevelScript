@@ -664,6 +664,7 @@ class ExpressionExecutor(Executor):
                     raise OverWaitTaskError(task.name, info=self.expression.meta_info)
 
                 wait_count = 0
+
                 while not task.done:
                     if wait_count % settings.step_task_size_to_sleep == 0:
                         wait_count = 0
