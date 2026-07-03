@@ -664,6 +664,7 @@ class ExpressionExecutor(Executor):
                     raise OverWaitTaskError(task.name, info=self.expression.meta_info)
 
                 wait_count = 0
+
                 while not task.done:
                     if wait_count % settings.step_task_size_to_sleep == 0:
                         wait_count = 0
@@ -798,8 +799,16 @@ class ExpressionExecutor(Executor):
     def async_execute(self, as_atomic=False) -> Iterable:
         gen = self.evaluate()
 
+        wait_count = 0
+
         while True:
             try:
+                if wait_count % settings.step_task_size_to_sleep == 0:
+                    wait_count = 0
+                    time.sleep(settings.task_thread_switch_interval)
+
+                wait_count += 1
+
                 res = yield from gen
 
                 if not isinstance(res, Yield):

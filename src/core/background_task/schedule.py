@@ -1,7 +1,9 @@
 import atexit
+import queue
 import random
 import time
 from itertools import cycle
+from queue import Queue
 from threading import Lock, Thread, Event
 from typing import Optional, Final, Generator
 
@@ -136,10 +138,36 @@ class TaskScheduler:
         self.threads: list[ThreadWorker] = []
         self._round_robin_process_list: Optional[Generator[ThreadWorker]] = None
         self._lock = Lock()
+        self._stop_event = Event()
+        self._queue_task = Queue()
+        self._dispatcher = Thread(target=self.dispatch, daemon=True)
+        self._dispatcher.start()
+
         atexit.register(self.shutdown)
+
+    def dispatch(self):
+        while not self._stop_event.is_set():
+            try:
+                task = self._queue_task.get(timeout=settings.scheduler_task_check_period)
+            except queue.Empty:
+                continue
+
+            worker = self.next_worker()
+
+            while not worker.is_active():
+                worker = self.next_worker()
+
+            worker.add_task(task)
 
     def shutdown(self):
         with self._lock:
+            self._stop_event.set()
+            worker = self.create_worker()
+
+            while not self._queue_task.empty():
+                task = self._queue_task.get_nowait()
+                worker.add_task(task)
+
             for worker in self.threads:
                 worker.stop()
             self.threads.clear()
@@ -161,12 +189,7 @@ class TaskScheduler:
         return None
 
     def schedule_task(self, task: AbstractBackgroundTask):
-        worker = self.next_worker()
-
-        while not worker.is_active():
-            worker = self.next_worker()
-
-        worker.add_task(task)
+        self._queue_task.put_nowait(task)
 
     def next_worker(self) -> ThreadWorker:
         with self._lock:
@@ -188,13 +211,16 @@ class TaskScheduler:
 
                 return next(self._round_robin_process_list)
 
-            worker = ThreadWorker()
-            worker.start()
-            self.threads.append(worker)
-            self._round_robin_process_list = cycle(self.threads)
-
+            worker = self.create_worker()
             return worker
 
+    def create_worker(self):
+        worker = ThreadWorker()
+        worker.start()
+        self.threads.append(worker)
+        self._round_robin_process_list = cycle(self.threads)
+
+        return worker
 
 def get_task_scheduler() -> TaskScheduler:
     """Лениво создаёт планировщик задач при первом вызове."""

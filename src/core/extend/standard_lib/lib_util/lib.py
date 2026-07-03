@@ -198,7 +198,7 @@ class ViewNodesEntity(PyExtendWrapper):
         return VOID
 
 
-@builder.collect(func_name='получить_все_задачи')
+@builder.collect(func_name='получить_все_активные_задачи')
 class GetAllTasks(PyExtendWrapper):
     def __init__(self, func_name: str):
         super().__init__(func_name)

@@ -14,7 +14,7 @@ packaging~=25.0
 
 requests~=2.32.5
 
-pygame~=2.6.1
+pygame-ce~=2.5.7
 
 pytest~=9.0.3
 

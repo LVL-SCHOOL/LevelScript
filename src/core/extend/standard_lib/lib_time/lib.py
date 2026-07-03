@@ -93,9 +93,9 @@ class BackgroundSleep(PyExtendWrapper):
                 switch = 0
 
                 while time.monotonic() - start_time < self.sleep_time:
-                    if switch >= self._switch_point:
-                        time.sleep(self._delta_sleep_time)
-                        switch = 0
+                    # if switch >= self._switch_point:
+                    #     time.sleep(self._delta_sleep_time)
+                    #     switch = 0
 
                     yield YIELD
 

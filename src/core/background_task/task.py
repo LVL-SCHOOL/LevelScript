@@ -111,7 +111,6 @@ class ProcedureBackgroundTask(AbstractBackgroundTask):
         with self._procedure_lock:
             if self._generator is not None:
                 self._generator.close()
-                self._generator = None
                 self._done = True
                 self._current_result = None
 
