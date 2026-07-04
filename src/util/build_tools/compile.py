@@ -226,6 +226,7 @@ class Compiler:
                     base_ex=parent.base_ex,
                     parent=compiled_obj.parent,
                     methods=compiled_obj.methods,
+                    behaviours=compiled_obj.behaviours,
                     constructor=compiled_obj.constructor
                 )
 

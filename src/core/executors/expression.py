@@ -96,6 +96,7 @@ class ExpressionExecutor(Executor):
         self.compiled = compiled
         self.procedure_executor = _get_procedure_executor()
         self.task_scheduler = get_task_scheduler()
+        self.current_operation: Optional[Tokens] = None
 
     def prepare_operations(self) -> list[Union[BaseAtomicType, Operator]]:
         scope_vars = {
@@ -517,6 +518,8 @@ class ExpressionExecutor(Executor):
                 continue
 
             if operation.operator == Tokens.minus:
+                self.current_operation = Tokens.minus
+
                 if len(evaluate_stack) == 1:
                     operand = evaluate_stack.pop(-1)
                     atomic_type = type(operand)
@@ -532,6 +535,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(operands.atomic_type(operands.left.sub(operands.right)))
 
             elif operation.operator == Tokens.plus:
+                self.current_operation = Tokens.plus
+
                 if len(evaluate_stack) == 1:
                     operand = evaluate_stack.pop(-1)
 
@@ -551,6 +556,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(operands.atomic_type(operands.left.add(operands.right)))
 
             elif operation.operator == Tokens.star:
+                self.current_operation = Tokens.star
+
                 operands = self.get_operands(evaluate_stack)
 
                 if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_star):
@@ -559,6 +566,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(operands.atomic_type(operands.left.mul(operands.right)))
 
             elif operation.operator == Tokens.div:
+                self.current_operation = Tokens.div
+
                 operands = self.get_operands(evaluate_stack)
 
                 if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_div):
@@ -567,6 +576,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(operands.atomic_type(operands.left.div(operands.right)))
 
             elif operation.operator == Tokens.exponentiation:
+                self.current_operation = Tokens.exponentiation
+
                 operands = self.get_operands(evaluate_stack)
 
                 if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_exponentiation):
@@ -575,6 +586,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(operands.atomic_type(operands.left.pow(operands.right)))
 
             elif operation.operator == Tokens.and_:
+                self.current_operation = Tokens.and_
+
                 operands = self.get_operands(evaluate_stack)
 
                 if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_and):
@@ -583,6 +596,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(Boolean(operands.left.and_(operands.right)))
 
             elif operation.operator == Tokens.or_:
+                self.current_operation = Tokens.or_
+
                 operands = self.get_operands(evaluate_stack)
 
                 if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_or):
@@ -591,6 +606,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(Boolean(operands.left.or_(operands.right)))
 
             elif operation.operator == Tokens.not_:
+                self.current_operation = Tokens.not_
+
                 operand: BaseAtomicType = evaluate_stack.pop(-1)
 
                 if isinstance(operand, ClassField):
@@ -599,6 +616,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(Boolean(operand.not_()))
 
             elif operation.operator == Tokens.bool_equal:
+                self.current_operation = Tokens.bool_equal
+
                 operands = self.get_operands(evaluate_stack)
 
                 if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_equal):
@@ -607,6 +626,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(Boolean(operands.left.eq(operands.right)))
 
             elif operation.operator == Tokens.bool_not_equal:
+                self.current_operation = Tokens.bool_not_equal
+
                 operands = self.get_operands(evaluate_stack)
 
                 if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_not_equal):
@@ -615,6 +636,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(Boolean(operands.left.ne(operands.right)))
 
             elif operation.operator == Tokens.greater:
+                self.current_operation = Tokens.greater
+
                 operands = self.get_operands(evaluate_stack)
 
                 if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_greater):
@@ -623,6 +646,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(Boolean(operands.left.gt(operands.right)))
 
             elif operation.operator == Tokens.less:
+                self.current_operation = Tokens.less
+
                 operands = self.get_operands(evaluate_stack)
 
                 if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_less):
@@ -631,6 +656,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(Boolean(operands.left.lt(operands.right)))
 
             elif operation.operator == ServiceTokens.unary_minus:
+                self.current_operation = Tokens.minus
+
                 operand = evaluate_stack.pop(-1)
 
                 if isinstance(operand, ClassField):
@@ -641,6 +668,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(atomic_type(operand.neg()))
 
             elif operation.operator == ServiceTokens.unary_plus:
+                self.current_operation = Tokens.plus
+
                 operand = evaluate_stack.pop(-1)
 
                 if isinstance(operand, ClassField):
@@ -651,6 +680,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(atomic_type(operand.pos()))
 
             elif operation.operator == Tokens.wait:
+                self.current_operation = Tokens.wait
+
                 task = evaluate_stack.pop(-1)
 
                 if not isinstance(task, AbstractBackgroundTask):
@@ -681,6 +712,8 @@ class ExpressionExecutor(Executor):
                 evaluate_stack.append(task.result)
 
             elif operation.operator == ServiceTokens.in_background:
+                self.current_operation = f"{Tokens.in_} {Tokens.background}"
+
                 func = evaluate_stack.pop(-1)
 
                 if isinstance(func, PyExtendWrapper):
@@ -821,6 +854,12 @@ class ExpressionExecutor(Executor):
             except BaseError:
                 raise
             except TypeError:
+                if self.current_operation is not None:
+                    raise ErrorType(
+                        f"Ошибка выполнения операции '{self.current_operation}' между операндами в выражении '{self.expression.raw_expr}'!",
+                        info=self.expression.meta_info
+                    )
+
                 raise ErrorType(
                     f"Ошибка выполнения операции между операндами в выражении '{self.expression.raw_expr}'!",
                     info=self.expression.meta_info
@@ -858,6 +897,12 @@ class ExpressionExecutor(Executor):
         except BaseError:
             raise
         except TypeError:
+            if self.current_operation is not None:
+                raise ErrorType(
+                    f"Ошибка выполнения операции '{self.current_operation}' между операндами в выражении '{self.expression.raw_expr}'!",
+                    info=self.expression.meta_info
+                )
+
             raise ErrorType(
                 f"Ошибка выполнения операции между операндами в выражении '{self.expression.raw_expr}'!",
                 info=self.expression.meta_info

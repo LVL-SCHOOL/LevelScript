@@ -59,6 +59,9 @@ class ClassDefinition(BaseType):
         if methods is None:
             methods = {}
 
+        if behaviours is None:
+            behaviours = {}
+
         self.parent = parent
         self.constructor = constructor
         self.constructor_name = "__конструктор__"
@@ -79,9 +82,10 @@ class ClassDefinition(BaseType):
 class ClassExceptionDefinition(ClassDefinition):
     def __init__(
             self, name, *, base_ex: Type[BaseError], parent: Optional['ClassDefinition'] = None,
-            methods: Optional[dict[str, ClassField[Method]]] = None, constructor: Optional[Constructor] = None
+            methods: Optional[dict[str, ClassField[Method]]] = None, constructor: Optional[Constructor] = None,
+            behaviours: Optional[dict[str, ClassField[Method]]] = None,
     ):
-        super().__init__(name, parent, methods, constructor)
+        super().__init__(name, parent, methods, constructor, behaviours)
         self.base_ex = base_ex
         self.info_attr_name = "информация"
         self.err_inst_attr_name = "__ошибка__"
