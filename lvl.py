@@ -2,6 +2,8 @@ import sys
 import time
 from pathlib import Path
 
+from typing_extensions import NamedTuple
+
 from config import settings, WORKING_DIR, global_storage
 from src.core.background_task.schedule import get_task_scheduler
 from src.core.call_func_stack import draw_pretty_stack_err
@@ -15,6 +17,12 @@ from src.util.console_worker import printer
 from src.util.build_tools.starter import run_file, compile_string, run_compiled_code
 
 printer.debug = settings.debug
+
+
+class REPLCommand(NamedTuple):
+    name: str
+    description: str
+    aliases: set = set()
 
 
 def create_absolute_path_to_file(filename: str) -> Path:
@@ -81,15 +89,30 @@ class LevelScript:
         shift_str = " "
         all_code = Compiled({})
 
+        exit_cmd = REPLCommand("выход", "отключает интерактивный сеанс", aliases={'exit'})
+        cls_cmd = REPLCommand("очистить", "очищает интерактивный сеанс от предыдущего вывода", aliases={'cls'})
+        help_cmd = REPLCommand("помощь", "выводит информацию о командах", aliases={'help'})
+
+        commands = [
+            exit_cmd,
+            cls_cmd,
+            help_cmd,
+        ]
+
         while True:
             code = input(start_str)
 
-            if code == "выход":
+            if code == exit_cmd.name or code in exit_cmd.aliases:
                 success_process(f"Операция '{code}' завершена успешно.")
 
-            if code == "очистить":
+            if code == cls_cmd.name or code in cls_cmd.aliases:
                 for _ in range(100):
                     print()
+                continue
+
+            if code == help_cmd.name or code in help_cmd.aliases:
+                for cmd in commands:
+                    print(f"'{cmd.name}' - '{cmd.description}'")
                 continue
 
             if code.endswith(Tokens.left_bracket):
