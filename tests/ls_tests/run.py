@@ -14,7 +14,7 @@ def extract_number(filename):
 path = os.path.join(os.getcwd(), "")
 test_num = 0
 
-files = [f for f in os.listdir("") if f.startswith("test_") and f.endswith(settings.raw_postfix)]
+files = [f for f in os.listdir(".") if f.startswith("test_") and f.endswith(settings.raw_postfix)]
 files.sort(key=extract_number)  # Сортируем по числовому значению
 
 for file in files:
