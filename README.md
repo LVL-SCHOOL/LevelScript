@@ -36,7 +36,7 @@ py lvl.py --run hello_world.lvl
 ## Сборка(Windows):
 
 ```
-pyinstaller --onedir --hidden-import=requests --hidden-import=pygame --icon=assets\icon.ico --add-data "src\core\extend;src\core\extend" --add-data "src\core\docs_generate;src\core\docs_generate" --add-data "examples;dist/lvl" --add-data "hello_world.lvl;dist/lvl" .\lvl.py
+build.bat
 ```
 
 ### Запуск exe
