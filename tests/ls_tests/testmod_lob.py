@@ -4,7 +4,7 @@ from src.core.extend.function_wrap import PyExtendWrapper, PyExtendBuilder
 from src.core.types.basetype import BaseAtomicType
 
 builder = PyExtendBuilder()
-standard_lib_path = f"./"
+standard_lib_path = f"/"
 MOD_NAME = "тест_run_procedure"
 
 

@@ -170,7 +170,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-ls_tests/test_folder
+tests/ls_tests/test_folder
 law_config.env
 lvl_config.env
 
