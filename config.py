@@ -11,7 +11,8 @@ from rich.panel import Panel
 from rich.text import Text
 
 
-_MAX_THREAD_SUGGESTED: Final[int] = os.cpu_count() * 2 - 1 or 1
+_count_service_threads = 1
+_MAX_THREAD_SUGGESTED: Final[int] = os.cpu_count() * 2 - (1 + _count_service_threads) or 1
 _MAX_THREAD_SAFE: Final[int] = min(_MAX_THREAD_SUGGESTED * 4, 256)
 
 
@@ -55,7 +56,7 @@ class Settings(BaseSettings):
     ttl_thread: float = Field(default=2)
     ttl_check_free_tasks: float = Field(default=0.05)
     wait_task_time: float = Field(default=.001)
-    scheduler_task_check_period: float = Field(default=0.1)
+    scheduler_task_check_period: float = Field(default=1)
     std_name: str = Field(default="стандартная_библиотека")
     standard_lib_path_postfix: str = Field(default="/core/extend/standard_lib/modules")
     task_thread_switch_interval: float = Field(default=.00001)
