@@ -11,7 +11,8 @@ from rich.panel import Panel
 from rich.text import Text
 
 
-_MAX_THREAD_SUGGESTED: Final[int] = os.cpu_count() * 2 - 1 or 1
+_count_service_threads = 1
+_MAX_THREAD_SUGGESTED: Final[int] = os.cpu_count() * 2 - (1 + _count_service_threads) or 1
 _MAX_THREAD_SAFE: Final[int] = min(_MAX_THREAD_SUGGESTED * 4, 256)
 
 
