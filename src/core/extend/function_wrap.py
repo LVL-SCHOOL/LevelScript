@@ -6,6 +6,7 @@ import dill
 
 from config import settings
 from src.core.exceptions import BaseError, ArgumentError, ErrorType
+from src.core.parse.base import is_identifier
 from src.core.types.atomic import convert_atomic_type_to_py_type, VOID
 from src.core.types.basetype import BaseAtomicType, BaseType
 from src.core.types.line import Info
@@ -25,6 +26,7 @@ class PyExtendWrapper(BaseType, ABC):
         self.offset_required_args = -1
         self.namespace: Optional['Compiled'] = None
         self.signature: tuple[Union[Type[BaseAtomicType], Type[Procedure]]] = tuple()
+        self.is_async = False
 
     @abstractmethod
     def call(self, args: Optional[list[BaseAtomicType]] = None) -> BaseAtomicType: ...
@@ -79,12 +81,11 @@ class PyExtendWrapper(BaseType, ABC):
                     f"но передано: {len(args)}"
                 )
 
-        elif self.count_args != -1:
-            if len(args) != self.count_args:
-                raise ArgumentError(
-                    f"Неверное количество аргументов процедуры '{self.func_name}'. Ожидалось: {self.count_args}, "
-                    f"но передано: {len(args)}"
-                )
+        elif self.count_args != -1 and len(args) != self.count_args:
+            raise ArgumentError(
+                f"Неверное количество аргументов процедуры '{self.func_name}'. Ожидалось: {self.count_args}, "
+                f"но передано: {len(args)}"
+            )
 
         if not self.signature:
             return
@@ -159,6 +160,9 @@ class PyExtendBuilder:
                 raise ValueError(
                     "Длина сигнатуры и кол-во аргументов должны быть равны. Либо сигнатура должна быть пуста!"
                 )
+
+            if not is_identifier(func_name):
+                raise ValueError(f"Название процедуры: '{func_name}' имеет недопустимые символы!")
 
             self.wrappers.append(instance_py_wrapper)
 

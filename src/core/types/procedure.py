@@ -21,7 +21,6 @@ class Procedure(CodeBlock):
 
         self.arguments_names = arguments_names
         self.default_arguments = default_arguments
-        self.default_arguments = default_arguments
         self.inf_args_name = inf_args_name
         self.is_inf_args = is_inf_args
         self.tree_variables: Optional[ScopeStack] = None
@@ -31,7 +30,10 @@ class Procedure(CodeBlock):
         return "Процедура"
 
     def __str__(self):
-        return f"Процедура('{self.name}') кол-во аргументов: {len(self.arguments_names)}"
+        return (
+            f"Процедура('{self.name}') "
+            f"кол-во аргументов: {len(self.arguments_names) if not self.is_inf_args else 'неограниченное'}"
+        )
 
     def __repr__(self):
         return self.name

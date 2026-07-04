@@ -176,20 +176,15 @@ class DefineProcedureParser(Parser):
         arguments = required_arguments + default_arguments
         printer.logging(f"Объединенный список аргументов: {arguments}", level="INFO")
 
-        previous_arg = ""
-
         for offset, arg_name in enumerate(arguments):
-            current_arg = arguments[offset]
             printer.logging(f"Проверка уникальности аргумента [{offset}]: '{arg_name}'", level="DEBUG")
 
-            if current_arg == previous_arg:
+            if arguments.count(arg_name) > 1:
                 printer.logging(f"Обнаружен дубликат аргумента: '{arg_name}'", level="ERROR")
                 raise InvalidSyntaxError(
                     f"Неверный синтаксис. Аргументы не могут использовать одно и то же имя: '{arg_name}'",
                     info=info_line
                 )
-
-            previous_arg = arg_name
 
         for name, expr in default_arguments_names_values.items():
             if self.default_arguments is None:

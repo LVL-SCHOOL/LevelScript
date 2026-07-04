@@ -172,5 +172,9 @@ cython_debug/
 .pypirc
 ls_tests/test_folder
 law_config.env
+lvl_config.env
 
 gi_*
+.sonar/
+line_counter.py
+file_ex_rename.py

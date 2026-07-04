@@ -12,6 +12,10 @@ from src.core.util import kill_process
 from src.util.build_tools.compile import Compiled
 
 
+class Comment: ...
+
+
+COMMENT_MARK = Comment()
 STANDARD_LIB_PATH = Path(__file__).resolve().parent.parent.parent
 STANDARD_LIB_PATH = f"{STANDARD_LIB_PATH}{settings.standard_lib_path_postfix}"
 STD_NAME = settings.std_name
@@ -63,6 +67,16 @@ def delete_end_expr_for_include_directive(directive: list[str]):
     return directive
 
 
+def _file_priority(filename: str) -> int:
+    if filename.endswith(f".{settings.compiled_postfix}"):
+        return 0
+    elif filename.endswith(f".{settings.py_extend_postfix}"):
+        return 1
+    elif filename.endswith(f".{settings.raw_postfix}"):
+        return 2
+    return 3
+
+
 class Preprocessor:
     def __init__(self):
         self.imports = set()
@@ -79,6 +93,7 @@ class Preprocessor:
             clean_line = ""
 
             if line.startswith(Tokens.comment):
+                prepared_code.append(COMMENT_MARK)
                 continue
 
             for symbol in line:
@@ -99,6 +114,9 @@ class Preprocessor:
 
         for offset, line in enumerate(prepared_code):
             if not line:
+                continue
+
+            if isinstance(line, Comment):
                 continue
 
             if Tokens.end_expr in line and not line.startswith(Tokens.comment):
@@ -145,13 +163,13 @@ class Preprocessor:
                     if all(add_expr_conditions):
                         end = Tokens.end_expr
 
-                    line_ = Line(expr.strip() + end, num=offset+1, file=path)
+                    line_ = Line(expr.strip() + end, num=offset + 1, file=path)
                     line_.raw_line = line
                     code.append(line_)
 
                 continue
 
-            code.append(Line(line.strip(), num=offset+1, file=path))
+            code.append(Line(line.strip(), num=offset + 1, file=path))
 
         preprocessed = []
 
@@ -161,15 +179,14 @@ class Preprocessor:
             match separate_line:
                 case [Tokens.include, package] if package.endswith(Tokens.star):
                     is_std_path = _is_std(package)
+                    # Удаляем * из пути и получаем директорию
+                    package = package[:-1].replace(Tokens.dot, "/")
                     package = _standard_lib_alias(package)
 
                     if package in self.imports:
                         continue
 
                     self.imports.add(package)
-
-                    # Удаляем * из пути и получаем директорию
-                    package = package[:-1].replace(Tokens.dot, "/")
 
                     dir_path = os.path.dirname(package)
 
@@ -181,28 +198,31 @@ class Preprocessor:
                         kill_process(f"Модуль для включения не найден: '{dir_path}'")
 
                     try:
-                        checked_files = []
+                        checked_files = set()
 
-                        for filename in files: # noqa
+                        # Сортируем файлы по приоритету: compiled -> py_extend -> raw
+                        files.sort(key=_file_priority)
+
+                        for filename in files:
                             file_without_ext = os.path.splitext(filename)[0]
 
                             if file_without_ext in checked_files:
                                 continue
 
-                            if filename.endswith(f".{settings.compiled_postfix}"):  # Проверка на нужное расширение
+                            if filename.endswith(f".{settings.compiled_postfix}"):
                                 file_path = os.path.join(dir_path, filename)
                                 preprocessed.append(import_preprocess(file_path))
-                                checked_files.append(file_without_ext)
-                            elif filename.endswith(f".{settings.py_extend_postfix}"):  # Проверка на нужное расширение
+                                checked_files.add(file_without_ext)
+                            elif filename.endswith(f".{settings.py_extend_postfix}"):
                                 file_path = os.path.join(dir_path, filename)
                                 preprocessed.append(import_preprocess(file_path))
-                                checked_files.append(file_without_ext)
-                            elif filename.endswith(f".{settings.raw_postfix}"):  # Проверка на нужное расширение
+                                checked_files.add(file_without_ext)
+                            elif filename.endswith(f".{settings.raw_postfix}"):
                                 file_path = os.path.join(dir_path, filename)
                                 preprocessed.extend(self.preprocess(
                                     import_preprocess(file_path, byte_mode=False), file_path)
                                 )
-                                checked_files.append(file_without_ext)
+                                checked_files.add(file_without_ext)
 
                     except RecursionError:
                         kill_process(
@@ -211,6 +231,7 @@ class Preprocessor:
 
                 case [Tokens.include, module] if re.search(r'\.\S+$', module):
                     is_std_path = _is_std(module)
+                    module = module.replace(Tokens.dot, "/", module.count("."))
                     module = _standard_lib_alias(module)
 
                     if module in self.imports:
@@ -218,7 +239,6 @@ class Preprocessor:
 
                     self.imports.add(module)
 
-                    module = module.replace(".", "/", module.count("."))
                     path = module
 
                     if not is_std_path:

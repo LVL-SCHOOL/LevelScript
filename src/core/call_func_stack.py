@@ -1,6 +1,7 @@
 from typing import NamedTuple
 
 from src.core.types.line import Info
+from src.util.console_worker import printer
 
 
 class CallFunc(NamedTuple):
@@ -41,3 +42,12 @@ def get_stack_pretty_str() -> str:
         )
 
     return call_stack_str
+
+
+def draw_pretty_stack_err(e: Exception):
+    stack_trace = get_stack_pretty_str()
+
+    if stack_trace:
+        stack_trace += "\n"
+
+    printer.print_error(f"{stack_trace}{str(e)}")

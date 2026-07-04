@@ -1,4 +1,4 @@
-# Язык написания контрактов: LawScript!
+# Язык программирования: LevelScript!
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/B-E-R-K-Y-T/LawScript)
 
@@ -14,7 +14,7 @@ py -m venv .venv
 .venv/Scripts/activate
 set PYTHONPATH=%CD%
 pip install -r requirements.txt
-py law.py --run hello_world.raw
+py lvl.py --run hello_world.lvl
 ```
 
 ### Linux/Mac
@@ -26,30 +26,34 @@ py -m venv .venv
 .venv/Scripts/activate
 export PYTHONPATH=$(pwd)
 pip install -r requirements.txt
-py law.py --run hello_world.raw
+py lvl.py --run hello_world.lvl
 ```
 
 ## Сборка:
 
 ```
-pyinstaller --onedir --hidden-import=requests --hidden-import=pygame .\law.py
+pyinstaller --onedir --hidden-import=requests --hidden-import=pygame .\lvl.py
 ```
 
 ### Запуск exe
 
 ```
-law.exe --run hello_world.raw
+lvl.exe --run hello_world.lvl
 ```
 
 Если Вы увидете такой вывод: 
 
 ![img.png](docs/img_6.png)
 
-Значит LawScript работает штатно!
+Значит LevelScript работает штатно!
 
 ### Конфигурация
 
-Для настройки LawScript создайте файл law_config.env
+Для настройки LevelScript создайте файл lvl_config.env
+
+### Примеры кода
+
+[Примеры кода](./examples)
 
 ### Философия языка
 
@@ -58,18 +62,7 @@ law.exe --run hello_world.raw
 
 ## Пример императивного кода
 
-1
-![img1.png](docs/img1.png)
-
-2
-![img3.png](docs/img3.png)
-
-3
-![img.png](docs/img4.png)
-
-## Пример декларативного кода
-
-![img.png](docs/img.png)
+![img.png](docs/img_code_from_vs_code.png)1
 
 
 ## Пример обработки ошибок

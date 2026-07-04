@@ -1,6 +1,6 @@
 from typing import Optional, TypeVar, Generic, Type, Union
 
-from src.core.types.atomic import VOID
+from src.core.types.atomic import VOID, CustomAtomicType
 from src.core.types.basetype import BaseType, BaseAtomicType
 from src.core.types.procedure import Procedure, Body, Expression
 from src.core.exceptions import BaseError, create_define_class_wrap, EXCEPTIONS
@@ -47,7 +47,9 @@ class ClassField(BaseAtomicType, Generic[_T]):
 class ClassDefinition(BaseType):
     def __init__(
             self, name, parent: Optional['ClassDefinition'] = None,
-            methods: Optional[dict[str, ClassField[Method]]] = None, constructor: Optional[Constructor] = None
+            methods: Optional[dict[str, ClassField[Method]]] = None,
+            constructor: Optional[Constructor] = None,
+            behaviours: Optional[dict[str,  ClassField[Method]]] = None,
     ):
         super().__init__(name)
 
@@ -58,6 +60,7 @@ class ClassDefinition(BaseType):
         self.constructor = constructor
         self.constructor_name = "__конструктор__"
         self.methods = methods
+        self.behaviours = behaviours
 
     def create_instance(self, children: Optional['ClassInstance'] = None) -> 'ClassInstance':
         return ClassInstance(
@@ -109,7 +112,7 @@ class ClassExceptionDefinition(ClassDefinition):
         return ex_inst
 
 
-class ClassInstance(BaseAtomicType):
+class ClassInstance(CustomAtomicType):
     def __init__(
             self,
             class_name: str,
@@ -117,6 +120,7 @@ class ClassInstance(BaseAtomicType):
             children: Optional['ClassInstance'] = None
     ):
         super().__init__("")
+        self.class_instance_type_name = metadata.name
         self.metadata = metadata
         self.class_name = class_name
         self.value = self

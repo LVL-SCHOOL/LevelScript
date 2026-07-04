@@ -3,7 +3,11 @@ from typing import Union, NamedTuple, Type, Optional, TYPE_CHECKING, Callable, G
 
 from config import settings
 from src.core.background_task.schedule import get_task_scheduler
-from src.core.background_task.task import ProcedureBackgroundTask, AbstractBackgroundTask
+from src.core.background_task.task import (
+    ProcedureBackgroundTask,
+    AbstractBackgroundTask,
+    NativePythonFuncThreadBackgroundTask
+)
 from src.core.call_func_stack import call_func_stack_builder
 from src.core.exceptions import (
     ErrorType,
@@ -25,7 +29,7 @@ from src.core.types.basetype import BaseAtomicType, BaseType
 from src.core.types.classes import ClassDefinition, ClassInstance, Method, ClassField, Constructor
 from src.core.types.operation import Operator
 from src.core.types.procedure import Expression, Procedure, LinkedProcedure, ProcedureContextName
-from src.core.types.variable import ScopeStack, traverse_scope, Variable
+from src.core.types.variable import ScopeStack, Variable
 from src.core.extend.function_wrap import PyExtendWrapper
 
 if TYPE_CHECKING:
@@ -72,22 +76,6 @@ VALID_TYPES = (
     BaseDeclarativeType,
     ProcedureContextName
 )
-
-_T_OPERATOR = Operator
-_T_CLASS_FIELD = ClassField
-_T_LINKED_PROCEDURE = LinkedProcedure
-_T_ABSTRACT_BG_TASK = AbstractBackgroundTask
-_T_PROCEDURE_CTX_NAME = ProcedureContextName
-_T_PROCEDURE = Procedure
-_T_PY_EXTEND = PyExtendWrapper
-_T_CLASS_DEFINITION = ClassDefinition
-_T_CONSTRUCTOR = Constructor
-_T_METHOD = Method
-_T_CLASS_INSTANCE = ClassInstance
-_T_BOOLEAN = Boolean
-_T_YIELD = Yield
-_T_BASE_ATOMIC = BaseAtomicType
-_T_BASE_DECLARATIVE = BaseDeclarativeType
 
 
 class Operands(NamedTuple):
@@ -369,7 +357,7 @@ class ExpressionExecutor(Executor):
             args=args
         )
 
-    def call_py_extend_procedure(self, py_extend_procedure, args, evaluate_stack: list[Union[BaseAtomicType, PyExtendWrapper]]):
+    def call_py_extend_procedure(self, py_extend_procedure, args):
         try:
             py_extend_procedure.check_args(args)
             result = py_extend_procedure.call(args)
@@ -382,7 +370,7 @@ class ExpressionExecutor(Executor):
                 info=self.expression.meta_info
             )
 
-        evaluate_stack.append(result)
+        return result
 
     @staticmethod
     def handle_in_background(operation, prepared_operations, offset, evaluate_stack):
@@ -395,6 +383,24 @@ class ExpressionExecutor(Executor):
                 return True
 
         return False
+
+    def handle_behaviours(self, operands: Operands, evaluate_stack: list, behaviour_name: str):
+        instance: ClassInstance = operands.left
+
+        if not isinstance(instance, ClassInstance):
+            return False
+
+        if behaviour_name not in instance.metadata.behaviours:
+            return False
+
+        behaviour = instance.metadata.behaviours[behaviour_name]
+        other_name = behaviour.arguments_names[0]
+        behaviour.tree_variables = ScopeStack()
+        behaviour.tree_variables.set(Variable(other_name, operands.right))
+
+        self.call_method(behaviour, evaluate_stack, instance)
+
+        return True
 
     def evaluate(self) -> Union[BaseAtomicType, Generator[BaseAtomicType, None, None]]:
         prepared_operations: list[Union[BaseAtomicType, Operator]] = self.prepare_operations()
@@ -476,7 +482,8 @@ class ExpressionExecutor(Executor):
                     if call_metadata.procedure is not None:
                         call_func_stack_builder.push(func_name=operation.name, meta_info=self.expression.meta_info)
                         try:
-                            self.call_py_extend_procedure(call_metadata.procedure, call_metadata.args, evaluate_stack)
+                            result = self.call_py_extend_procedure(call_metadata.procedure, call_metadata.args)
+                            evaluate_stack.append(result)
                         finally:
                             call_func_stack_builder.pop()
 
@@ -518,6 +525,10 @@ class ExpressionExecutor(Executor):
                     continue
 
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_minus):
+                    continue
+
                 evaluate_stack.append(operands.atomic_type(operands.left.sub(operands.right)))
 
             elif operation.operator == Tokens.plus:
@@ -533,26 +544,50 @@ class ExpressionExecutor(Executor):
                     continue
 
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_plus):
+                    continue
+
                 evaluate_stack.append(operands.atomic_type(operands.left.add(operands.right)))
 
             elif operation.operator == Tokens.star:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_star):
+                    continue
+
                 evaluate_stack.append(operands.atomic_type(operands.left.mul(operands.right)))
 
             elif operation.operator == Tokens.div:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_div):
+                    continue
+
                 evaluate_stack.append(operands.atomic_type(operands.left.div(operands.right)))
 
             elif operation.operator == Tokens.exponentiation:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_exponentiation):
+                    continue
+
                 evaluate_stack.append(operands.atomic_type(operands.left.pow(operands.right)))
 
             elif operation.operator == Tokens.and_:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_and):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.and_(operands.right)))
 
             elif operation.operator == Tokens.or_:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_or):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.or_(operands.right)))
 
             elif operation.operator == Tokens.not_:
@@ -565,18 +600,34 @@ class ExpressionExecutor(Executor):
 
             elif operation.operator == Tokens.bool_equal:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_equal):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.eq(operands.right)))
 
             elif operation.operator == Tokens.bool_not_equal:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_not_equal):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.ne(operands.right)))
 
             elif operation.operator == Tokens.greater:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_greater):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.gt(operands.right)))
 
             elif operation.operator == Tokens.less:
                 operands = self.get_operands(evaluate_stack)
+
+                if self.handle_behaviours(operands, evaluate_stack, Tokens.behaviour_less):
+                    continue
+
                 evaluate_stack.append(Boolean(operands.left.lt(operands.right)))
 
             elif operation.operator == ServiceTokens.unary_minus:
@@ -613,8 +664,10 @@ class ExpressionExecutor(Executor):
                     raise OverWaitTaskError(task.name, info=self.expression.meta_info)
 
                 wait_count = 0
+
                 while not task.done:
                     if wait_count % settings.step_task_size_to_sleep == 0:
+                        wait_count = 0
                         time.sleep(settings.task_thread_switch_interval)
                     else:
                         yield YIELD
@@ -634,8 +687,18 @@ class ExpressionExecutor(Executor):
                     call_metadata = self.init_py_extend_procedure_context(func, evaluate_stack)
 
                     if call_metadata.procedure is not None:
+                        if not func.is_async:
+                            background_task = NativePythonFuncThreadBackgroundTask(
+                                func.name, self.call_py_extend_procedure,
+                                call_metadata.procedure, call_metadata.args
+                            )
+                            self.task_scheduler.schedule_task(background_task)
+                            evaluate_stack.append(background_task)
+                            continue
+
                         call_func_stack_builder.push(func_name=operation.name, meta_info=self.expression.meta_info)
-                        self.call_py_extend_procedure(call_metadata.procedure, call_metadata.args, evaluate_stack)
+                        result = self.call_py_extend_procedure(call_metadata.procedure, call_metadata.args)
+                        evaluate_stack.append(result)
                         call_func_stack_builder.pop()
 
                         background_task = evaluate_stack.pop(-1)

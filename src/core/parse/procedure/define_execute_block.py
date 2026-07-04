@@ -4,7 +4,7 @@ from typing import Optional
 from src.core.exceptions import InvalidSyntaxError
 from src.core.parse.base import MetaObject, Image
 from src.core.parse.procedure.body import BodyParser
-from src.core.parse.procedure.muti_expressions import MultiExpressionParser
+from src.core.parse.procedure.muti_expressions import MultiExpressionParser, count_real_left_bracket
 from src.core.tokens import Tokens
 from src.core.types.execute_block import ExecuteBlock
 from src.core.types.line import Line, Info
@@ -94,7 +94,7 @@ class DefineExecuteBlockParser(BodyParser):
                     expr = [*expr, last]
 
                     res_expr = self.execute_parse(
-                        MultiExpressionParser(expr.count(Tokens.left_bracket)), body, self.next_num_line(num)
+                        MultiExpressionParser(count_real_left_bracket(expr)), body, self.next_num_line(num)
                     )
 
                     expr.extend(res_expr.expressions)

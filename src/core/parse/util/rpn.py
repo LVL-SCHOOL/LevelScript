@@ -3,8 +3,9 @@ from typing import Union
 from src.core.exceptions import InvalidExpression, BaseError
 from src.core.extend.function_wrap import PyExtendWrapper
 from src.core.parse.base import is_integer, is_float, is_identifier
+from src.core.parse.util.token_check import NEXT_TOKEN_CHECKERS, check_default
 from src.core.tokens import Tokens, ServiceTokens
-from src.core.types.atomic import Number, String, Boolean, Void, VOID
+from src.core.types.atomic import Number, String, Boolean, VOID
 from src.core.types.basetype import BaseAtomicType
 from src.core.types.line import Info
 from src.core.types.operation import Operator
@@ -57,6 +58,9 @@ def check_correct_expr(expr: list[str]):
 
         if not filter_on:
             filtered_expr.append(op)
+
+    if not filtered_expr:
+        return
 
     if filtered_expr:
         if filtered_expr[-1] in ALLOW_OPERATORS - {Tokens.left_bracket, Tokens.right_bracket, Tokens.true, Tokens.false}:
@@ -148,6 +152,18 @@ def check_correct_expr(expr: list[str]):
             count_double_comma += 1
         else:
             count_double_comma = 0
+
+    is_string = False
+
+    for offset, current_op in enumerate(expr):
+        if current_op == Tokens.quotation:
+            is_string = not is_string
+
+        if is_string:
+            continue
+
+        next_token_checker = NEXT_TOKEN_CHECKERS.get(current_op, check_default)
+        next_token_checker([str(item) for item in expr], current_op, offset)
 
 
 def prepare_expr(expr: list[str]) -> list:

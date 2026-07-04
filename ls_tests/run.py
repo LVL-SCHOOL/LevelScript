@@ -2,25 +2,25 @@ import re
 import time
 import os
 
+from config import settings
 from src.util.build_tools.starter import run_file
 
 
 def extract_number(filename):
-    match = re.search(r'test_(\d+)\.raw', filename)
+    match = re.search(r'test_(\d+)\.{}'.format(settings.raw_postfix), filename)
     return int(match.group(1)) if match else 0
 
 
 path = os.path.join(os.getcwd(), "")
 test_num = 0
 
-files = [f for f in os.listdir(".") if f.startswith("test_") and f.endswith(".raw")]
+files = [f for f in os.listdir(".") if f.startswith("test_") and f.endswith(settings.raw_postfix)]
 files.sort(key=extract_number)  # Сортируем по числовому значению
 
 for file in files:
-    if file.startswith("test") and file.endswith(".raw"):
+    if file.startswith("test") and file.endswith(settings.raw_postfix):
         test_num += 1
 
-        time.sleep(0.5)
         print(f"#{test_num}: Запуск файла: {file}")
 
         st0 = time.perf_counter()
@@ -29,4 +29,5 @@ for file in files:
 
         print(f"Тест #{test_num}: Время выполнения: {st1 - st0}")
         print(f"Тест #{test_num} успешно завершен")
+
         time.sleep(0.5)

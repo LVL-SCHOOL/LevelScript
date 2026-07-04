@@ -1,9 +1,9 @@
 import pygame
 
-from src.core.types.atomic import CustomType, Number, Array, Boolean
+from src.core.types.atomic import CustomAtomicType, Number, Array, Boolean
 
 
-class GameScreen(CustomType):
+class GameScreen(CustomAtomicType):
     def __init__(self, screen):
         super().__init__()
         self.screen = screen
@@ -21,13 +21,13 @@ class GameScreen(CustomType):
         return "ИгровоеОкно"
 
 
-class GameEventType(CustomType):
+class GameEventAtomicType(CustomAtomicType):
     def __init__(self, type_):
         super().__init__(type_)
         self.type = type_
 
-    def eq(self, other: 'GameEventType'):
-        if isinstance(other, GameEventType):
+    def eq(self, other: 'GameEventAtomicType'):
+        if isinstance(other, GameEventAtomicType):
             return self.type == other.type
         return False
 
@@ -39,12 +39,12 @@ class GameEventType(CustomType):
         return "ТипСобытия"
 
 
-class GameEvent(CustomType):
+class GameEvent(CustomAtomicType):
     def __init__(self, event):
         super().__init__()
         self.event = event
         self.fields = {
-            "тип": GameEventType(event.type),
+            "тип": GameEventAtomicType(event.type),
             "это_выход": Boolean(self.event.type == pygame.QUIT)
         }
 
@@ -70,7 +70,7 @@ class GameEvent(CustomType):
         return "Событие"
 
 
-class GameImage(CustomType):
+class GameImage(CustomAtomicType):
     def __init__(self, image):
         super().__init__()
         self.image = image
@@ -92,7 +92,7 @@ class GameImage(CustomType):
         return "Картинка"
 
 
-class GameRect(CustomType):
+class GameRect(CustomAtomicType):
     def __init__(self, rect):
         super().__init__()
         self.rect = rect
@@ -122,7 +122,7 @@ class GameRect(CustomType):
         return "Прямоугольник"
 
 
-class GameText(CustomType):
+class GameText(CustomAtomicType):
     def __init__(self, text_surface):
         super().__init__()
         self.text_surface = text_surface

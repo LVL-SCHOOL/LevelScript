@@ -2,6 +2,7 @@ from typing import Optional
 
 from src.core.exceptions import InvalidSyntaxError, NameAlreadyExist
 from src.core.parse.base import Parser, MetaObject, Image
+from src.core.parse.classes.define_behaviour import DefineBehaviourParser
 from src.core.parse.classes.define_constructor import DefineConstructorParser
 from src.core.parse.classes.define_method import DefineMethodParser, DefineMethodMetaObject
 from src.core.tokens import Tokens
@@ -16,6 +17,7 @@ class DefineClassMetaObject(MetaObject):
             self, stop_num: int, name: str, info: Info,
             parent: Optional[ClassDefinition] = None,
             methods: Optional[dict[str, DefineMethodMetaObject]] = None,
+            behaviours: Optional[dict[str, DefineMethodMetaObject]] = None,
             constructor: Optional[Constructor] = None
     ):
         printer.logging(f"Создание метаобъекта класса {name}", level="DEBUG")
@@ -28,6 +30,7 @@ class DefineClassMetaObject(MetaObject):
         self.info = info
         self.parent = parent
         self.methods = methods
+        self.behaviours = behaviours
         self.constructor = constructor
 
     def create_image(self) -> Image:
@@ -35,7 +38,7 @@ class DefineClassMetaObject(MetaObject):
         return Image(
             name=self.name,
             obj=ClassDefinition,
-            image_args=(self.parent, self.methods, self.constructor),
+            image_args=(self.parent, self.methods, self.constructor, self.behaviours),
             info=self.info,
         )
 
@@ -47,6 +50,7 @@ class DefineClassParser(Parser):
         self.name: Optional[str] = None
         self.parent: Optional[ClassDefinition] = None
         self.methods: dict[str, DefineMethodMetaObject] = {}
+        self.behaviours: dict[str, DefineMethodMetaObject] = {}
         self.constructor: Optional[Constructor] = None
         printer.logging("Инициализация парсера класса", level="TRACE")
 
@@ -58,6 +62,7 @@ class DefineClassParser(Parser):
             info=self.info,
             parent=self.parent,
             methods=self.methods,
+            behaviours=self.behaviours,
             constructor=self.constructor,
         )
 
@@ -100,6 +105,19 @@ class DefineClassParser(Parser):
                     self.methods[name] = method
                     printer.logging(f"Метод {name} успешно обработан", level="DEBUG")
 
+                case [
+                    Tokens.define, Tokens.behaviour, Tokens.left_bracket, _, Tokens.right_bracket, name, *_
+                ]:
+                    printer.logging(f"Обнаружен метод {name} в классе {self.name}", level="DEBUG")
+                    if name in self.methods.keys():
+                        printer.logging(f"Ошибка: метод {name} уже существует", level="ERROR")
+                        raise NameAlreadyExist(name, info=self.info)
+
+                    printer.logging(f"Запуск парсера для метода {name}", level="TRACE")
+                    behaviour = self.execute_parse(DefineBehaviourParser, body, num)
+                    self.behaviours[name] = behaviour
+                    printer.logging(f"Метод {name} успешно обработан", level="DEBUG")
+
                 case [Tokens.define, Tokens.constructor, Tokens.left_bracket, _, Tokens.right_bracket, *_]:
                     printer.logging("Обнаружен конструктор класса", level="DEBUG")
                     if self.constructor is not None:
@@ -125,7 +143,7 @@ class DefineClassParser(Parser):
 
                 case _:
                     printer.logging(f"Неверный синтаксис в строке: {line}", level="ERROR")
-                    raise InvalidSyntaxError(info=self.info)
+                    raise InvalidSyntaxError(line=line, info=self.info)
 
         printer.logging("Ошибка: не найдена закрывающая скобка класса", level="ERROR")
         raise InvalidSyntaxError

@@ -1,11 +1,11 @@
 from collections.abc import Iterable
+from copy import copy
 from difflib import SequenceMatcher
 from typing import Optional, Any, TYPE_CHECKING, Final, Type
 
 from src.core.tokens import Tokens
 from src.core.types.basetype import BaseType
 from src.core.types.line import Info
-from src.core.types.severitys import Levels
 
 if TYPE_CHECKING:
     from src.core.types.variable import Scope
@@ -138,9 +138,10 @@ class BaseError(Exception):
         return f"{self.exc_name}: {self.msg}"
 
     def raw_throw(self):
-        self._raw_mode = True
+        copy_self = copy(self)
+        copy_self._raw_mode = True
 
-        return self
+        return copy_self
 
     @classmethod
     def get_inst(cls):
@@ -227,27 +228,17 @@ class InvalidSyntaxError(BaseError):
             case [Tokens.handler, *_]:
                 return f"{Tokens.handler} <ИМЯ_КЛАССА_ОШИБКИ> {Tokens.as_} <ИМЯ_ПЕРЕМЕННОЙ> {Tokens.left_bracket}"
 
+            case [Tokens.define, Tokens.method, *_]:
+                return (
+                    f"{Tokens.define} {Tokens.method} {Tokens.left_bracket}<ССЫЛКА>{Tokens.right_bracket} "
+                    f"<ИМЯ_МЕТОДА> {Tokens.left_bracket}<АРГУМЕНТЫ>{Tokens.right_bracket} {Tokens.left_bracket}"
+                )
+
             case [Tokens.right_bracket]:
                 return f"{Tokens.right_bracket} (закрытие блока)"
 
             case _:
                 return ""
-
-
-@_add_ex
-class InvalidLevelDegree(BaseError):
-    exc_name = "ОшибкаЗначенияТипа"
-
-    def __init__(self, degree: Optional[str] = None, *, info: Optional[Info] = None):
-        if degree is None:
-            msg = "Ошибка значения типа!"
-        else:
-            msg = (
-                f"Значение: '{degree}' запрещено для типа '{Tokens.degree} {Tokens.of_rigor}'. "
-                f"Используйте один из следующих типов: {[str(level) for level in Levels]}"
-            )
-
-        super().__init__(msg, info=info)
 
 
 @_add_ex
