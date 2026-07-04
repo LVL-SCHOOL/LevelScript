@@ -4,7 +4,7 @@ from pathlib import Path
 
 from config import settings, WORKING_DIR, global_storage
 from src.core.background_task.schedule import get_task_scheduler
-from src.core.call_func_stack import get_stack_pretty_str, draw_pretty_stack_err
+from src.core.call_func_stack import draw_pretty_stack_err
 from src.core.exceptions import BaseError
 from src.core.tokens import Tokens
 from src.core.types.execute_block import ExecuteBlock
@@ -22,7 +22,7 @@ def create_absolute_path_to_file(filename: str) -> Path:
     return (WORKING_DIR / filename).resolve()
 
 
-class Law:
+class LevelScript:
     def run(self):
         start = time.perf_counter()
 
@@ -121,8 +121,8 @@ class Law:
 
 
 if __name__ == '__main__':
-    law = Law()
+    law = LevelScript()
     law.run()
-    # file = "ls_tests\\test_109.law"
+    # file = f"ls_tests\\test_109.{settings.raw_postfix}"
     # run_file(file)
     # build(file)

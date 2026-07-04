@@ -11,9 +11,6 @@ class Interpreter:
 
     def run(self):
         for name, obj in self.compiled.compiled_code.items():
-            if isinstance(obj, CheckerSituation):
-                executor = CheckerSituationExecutor(obj, self.compiled)
-                executor.execute()
-            elif isinstance(obj, ExecuteBlock):
+            if isinstance(obj, ExecuteBlock):
                 executor = ExecuteBlockExecutor(obj, self.compiled)
                 executor.execute()

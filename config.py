@@ -38,8 +38,8 @@ WORKING_DIR = get_working_directory()
 class Settings(BaseSettings):
     debug: bool = Field(default=False)
     max_recursion_depth: int = Field(default=10_000)
-    raw_postfix: str = Field(default="law")
-    compiled_postfix: str = Field(default="lawc")
+    raw_postfix: str = Field(default="lvl")
+    compiled_postfix: str = Field(default="lvlc")
     py_extend_postfix: str = Field(default="pyl")
     max_running_threads_tasks: int = Field(
         default=_MAX_THREAD_SUGGESTED,
@@ -63,9 +63,9 @@ class Settings(BaseSettings):
     time_to_join_thread: float = Field(default=0)
     force_overwrite_module: bool = Field(default=False)
     repl_title: str = Field(
-        default="Язык написания контрактов: LawScript!\n\n"
-                "LawScript объединяет юридическую точность с вычислительной мощностью, "
-                "позволяя превращать правовые нормы в исполняемый код."
+        default="Язык программирования: LevelScript!\n\n"
+                "LevelScript объединяет выразительность с вычислительной мощностью, "
+                "позволяя превращать самые смелые идеи в исполняемый код."
     )
 
     @field_validator("std_name")
@@ -87,7 +87,7 @@ class Settings(BaseSettings):
 
         return value
 
-    model_config = SettingsConfigDict(env_file="law_config.env")
+    model_config = SettingsConfigDict(env_file="lvl_config.env")
 
 
 try:
