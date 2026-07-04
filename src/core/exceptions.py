@@ -6,7 +6,6 @@ from typing import Optional, Any, TYPE_CHECKING, Final, Type
 from src.core.tokens import Tokens
 from src.core.types.basetype import BaseType
 from src.core.types.line import Info
-from src.core.types.severitys import Levels
 
 if TYPE_CHECKING:
     from src.core.types.variable import Scope
@@ -240,22 +239,6 @@ class InvalidSyntaxError(BaseError):
 
             case _:
                 return ""
-
-
-@_add_ex
-class InvalidLevelDegree(BaseError):
-    exc_name = "ОшибкаЗначенияТипа"
-
-    def __init__(self, degree: Optional[str] = None, *, info: Optional[Info] = None):
-        if degree is None:
-            msg = "Ошибка значения типа!"
-        else:
-            msg = (
-                f"Значение: '{degree}' запрещено для типа '{Tokens.degree} {Tokens.of_rigor}'. "
-                f"Используйте один из следующих типов: {[str(level) for level in Levels]}"
-            )
-
-        super().__init__(msg, info=info)
 
 
 @_add_ex

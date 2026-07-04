@@ -1,8 +1,6 @@
 from src.core.executors.execute_block import ExecuteBlockExecutor
-from src.core.types.checkers import CheckerSituation
 from src.core.types.execute_block import ExecuteBlock
 from src.util.build_tools.compile import Compiled
-from src.core.executors.checker_execute import CheckerSituationExecutor
 
 
 class Interpreter:

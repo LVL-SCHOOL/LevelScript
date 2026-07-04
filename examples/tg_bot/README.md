@@ -1,5 +1,5 @@
-# Telegram Bot на языке LawScript
-## Простой Telegram-бот, написанный на языке программирования LawScript.
+# Telegram Bot на языке LevelScript
+## Простой Telegram-бот, написанный на языке программирования LevelScript.
 
 ## Описание
 
@@ -56,4 +56,4 @@ law.exe --run examples\tg_bot\tests.raw
 - Очередь сообщений для обработки
 
 ### Зависимости
-Проект использует стандартные библиотеки LawScript
+Проект использует стандартные библиотеки LevelScript

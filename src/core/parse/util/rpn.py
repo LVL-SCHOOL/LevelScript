@@ -5,7 +5,7 @@ from src.core.extend.function_wrap import PyExtendWrapper
 from src.core.parse.base import is_integer, is_float, is_identifier
 from src.core.parse.util.token_check import NEXT_TOKEN_CHECKERS, check_default
 from src.core.tokens import Tokens, ServiceTokens
-from src.core.types.atomic import Number, String, Boolean, Void, VOID
+from src.core.types.atomic import Number, String, Boolean, VOID
 from src.core.types.basetype import BaseAtomicType
 from src.core.types.line import Info
 from src.core.types.operation import Operator

@@ -14,20 +14,10 @@ from src.core.extend.function_wrap import PyExtendWrapper
 from src.core.parse.base import MetaObject
 from src.core.parse.util.rpn import build_rpn_stack
 from src.core.tokens import Tokens, NOT_ALLOWED_TOKENS
-from src.core.types.atomic import Array, String, Table
 from src.core.types.basetype import BaseType
-from src.core.types.checkers import CheckerSituation
 from src.core.types.classes import Method, Constructor, ClassDefinition, ClassExceptionDefinition
-from src.core.types.conditions import Condition
-from src.core.types.criteria import Criteria
-from src.core.types.dispositions import Disposition
 from src.core.types.docs import Docs
-from src.core.types.documents import FactSituation, Document
 from src.core.types.execute_block import ExecuteBlock
-from src.core.types.hypothesis import Hypothesis
-from src.core.types.objects import Object
-from src.core.types.obligations import Obligation
-from src.core.types.laws import Law
 from src.core.types.procedure import (
     Procedure,
     CodeBlock,
@@ -47,11 +37,6 @@ from src.core.types.procedure import (
     ErrorThrow,
     Defer
 )
-from src.core.types.rules import Rule
-from src.core.types.sanction_types import SanctionType
-from src.core.types.sanctions import Sanction
-from src.core.types.severitys import Severity
-from src.core.types.subjects import Subject
 from src.util.console_worker import printer
 
 
@@ -222,65 +207,11 @@ class Compiler:
         compiled_obj = meta.create_image().build()
         printer.logging(f"Команда скомпилирована: {compiled_obj}", level="INFO")
 
-        if isinstance(compiled_obj, (SanctionType, Rule, Law, Obligation, Severity, Criteria)):
-            return compiled_obj
-
-        if isinstance(compiled_obj, Criteria):
-            return compiled_obj
 
         if isinstance(compiled_obj, ExecuteBlock):
             for expression in compiled_obj.expressions:
                 self.expr_compile(expression, [])
 
-            return compiled_obj
-
-        elif isinstance(compiled_obj, CheckerSituation):
-            compiled_obj.document = self.process_literal_field(
-                compiled_obj.document, Tokens.document, Tokens.check, Document
-            )
-            compiled_obj.fields["__документ__"] = compiled_obj.document # noqa
-            compiled_obj.fact_situation = self.process_literal_field(
-                compiled_obj.fact_situation,
-                f"{Tokens.actual} {Tokens.situation}", Tokens.check, FactSituation
-            )
-            compiled_obj.fields["__фактическая_ситуация__"] = compiled_obj.fact_situation # noqa
-
-        elif isinstance(compiled_obj, Sanction):
-            sanctions = []
-
-            for sanction_type in compiled_obj.type:
-                if sanction_type not in self.compiled:
-                    raise NameNotDefine(
-                        name=sanction_type,
-                        info=compiled_obj.meta_info
-                    )
-
-                sanction = self.compiled[sanction_type]
-
-                if not isinstance(sanction, SanctionType):
-                    raise ErrorType(f"Поле '{sanction_type}' должно иметь тип: {SanctionType}")
-
-                sanctions.append(sanction)
-
-            compiled_obj.type = self.execute_compile(sanctions)
-            compiled_obj.fields["__типы__"] = Array(compiled_obj.type)
-            compiled_obj.severity = self.execute_compile(compiled_obj.severity)
-
-        elif isinstance(compiled_obj, Disposition):
-            compiled_obj.law = self.process_literal_field(
-                compiled_obj.law, Tokens.law, Tokens.disposition, Law
-            )
-            compiled_obj.fields["__право__"] = compiled_obj.law
-            compiled_obj.obligation = self.process_literal_field(
-                compiled_obj.obligation, Tokens.duty, Tokens.disposition, Obligation
-            )
-            compiled_obj.fields["__обязанность__"] = compiled_obj.obligation
-            compiled_obj.rule = self.process_literal_field(
-                compiled_obj.rule, Tokens.rule, Tokens.disposition, Rule
-            )
-            compiled_obj.fields["__правило__"] = compiled_obj.rule
-
-        elif isinstance(compiled_obj, Subject):
             return compiled_obj
 
         elif isinstance(compiled_obj, Docs):
@@ -353,67 +284,6 @@ class Compiler:
 
         elif isinstance(compiled_obj, Procedure):
             return self.compile_procedure(compiled_obj)
-
-        elif isinstance(compiled_obj, Object):
-            return compiled_obj
-
-        elif isinstance(compiled_obj, Hypothesis):
-            compiled_obj.subject = self.process_literal_field(
-                compiled_obj.subject, Tokens.subject, Tokens.hypothesis, Subject
-            )
-            compiled_obj.fields["__субъект__"] = compiled_obj.subject
-            compiled_obj.object = self.process_literal_field(
-                compiled_obj.object, Tokens.object, Tokens.hypothesis, Object
-            )
-            compiled_obj.fields["__объект__"] = compiled_obj.object
-            compiled_obj.condition = self.process_literal_field(
-                compiled_obj.condition, Tokens.condition, Tokens.hypothesis, Condition
-            )
-            compiled_obj.fields["__условие__"] = compiled_obj.condition
-
-        elif isinstance(compiled_obj, Condition):
-            compiled_obj.criteria = self.process_object_field(
-                compiled_obj.criteria,
-                Tokens.criteria,
-                Tokens.condition,
-                Criteria
-            )
-            compiled_obj.fields["__критерии__"] = Table(
-                {String(k): v.value for k, v in compiled_obj.criteria.modify.items()}
-            )
-
-        elif isinstance(compiled_obj, FactSituation):
-            compiled_obj.object_ = self.process_literal_field(
-                compiled_obj.object_, Tokens.object, f"{Tokens.actual} {Tokens.situation}", Object
-            )
-            compiled_obj.fields["__объект__"] = compiled_obj.object_ # noqa
-            compiled_obj.subject = self.process_literal_field(
-                compiled_obj.subject, Tokens.subject, f"{Tokens.actual} {Tokens.situation}", Subject
-            )
-            compiled_obj.fields["__субъект__"] = compiled_obj.subject # noqa
-
-        elif isinstance(compiled_obj, Document):
-            compiled_obj.sanction = self.process_object_field(
-                compiled_obj.sanction,
-                Tokens.sanction,
-                Tokens.document,
-                Sanction
-            )
-            compiled_obj.fields["__санкция__"] = compiled_obj.sanction # noqa
-            compiled_obj.disposition = self.process_object_field(
-                compiled_obj.disposition,
-                Tokens.disposition,
-                Tokens.document,
-                Disposition
-            )
-            compiled_obj.fields["__диспозиция__"] = compiled_obj.disposition # noqa
-            compiled_obj.hypothesis = self.process_object_field(
-                compiled_obj.hypothesis,
-                Tokens.hypothesis,
-                Tokens.document,
-                Hypothesis
-            )
-            compiled_obj.fields["__гипотеза__"] = compiled_obj.hypothesis # noqa
 
         else:
             printer.logging(f"Невозможно скомпилировать: {compiled_obj}", level="ERROR")
