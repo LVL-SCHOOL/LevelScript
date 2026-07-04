@@ -121,8 +121,8 @@ class LevelScript:
 
 
 if __name__ == '__main__':
-    law = LevelScript()
-    law.run()
-    # file = f"ls_tests\\test_109.{settings.raw_postfix}"
+    lvl = LevelScript()
+    lvl.run()
+    # file = f"ls_tests\\test_110.{settings.raw_postfix}"
     # run_file(file)
     # build(file)

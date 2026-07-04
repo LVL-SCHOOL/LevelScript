@@ -34,6 +34,9 @@ class Constructor(Method):
         return f"Класс('{self.name}') кол-во аргументов: {len(self.arguments_names)}"
 
 
+class DefaultConstructor(Constructor): ...
+
+
 _T = TypeVar('_T', bound=BaseAtomicType)
 
 
@@ -49,7 +52,7 @@ class ClassDefinition(BaseType):
             self, name, parent: Optional['ClassDefinition'] = None,
             methods: Optional[dict[str, ClassField[Method]]] = None,
             constructor: Optional[Constructor] = None,
-            behaviours: Optional[dict[str,  ClassField[Method]]] = None,
+            behaviours: Optional[dict[str, ClassField[Method]]] = None,
     ):
         super().__init__(name)
 
@@ -133,6 +136,10 @@ class ClassInstance(CustomAtomicType):
             for name, method in self.metadata.parent.methods.items():
                 if name not in self.metadata.methods and name != self.metadata.constructor_name:
                     self.metadata.methods[name] = method
+
+            for name, behaviour in self.metadata.parent.behaviours.items():
+                if name not in self.metadata.behaviours:
+                    self.metadata.behaviours[name] = behaviour
 
     def get_attribute(self, name: str) -> ClassField:
         if name in self.metadata.methods:

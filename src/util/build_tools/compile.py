@@ -15,7 +15,7 @@ from src.core.parse.base import MetaObject
 from src.core.parse.util.rpn import build_rpn_stack
 from src.core.tokens import Tokens, NOT_ALLOWED_TOKENS
 from src.core.types.basetype import BaseType
-from src.core.types.classes import Method, Constructor, ClassDefinition, ClassExceptionDefinition
+from src.core.types.classes import Method, Constructor, ClassDefinition, ClassExceptionDefinition, DefaultConstructor
 from src.core.types.docs import Docs
 from src.core.types.execute_block import ExecuteBlock
 from src.core.types.procedure import (
@@ -261,7 +261,7 @@ class Compiler:
                 compiled_obj.parent = self.compiled[compiled_obj.parent]
 
             if compiled_obj.constructor is None:
-                compiled_obj.constructor = Constructor(
+                compiled_obj.constructor = DefaultConstructor(
                     str(),
                     body=Body(
                         str(),
