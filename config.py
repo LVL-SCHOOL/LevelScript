@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     ttl_thread: float = Field(default=2)
     ttl_check_free_tasks: float = Field(default=0.05)
     wait_task_time: float = Field(default=.001)
-    scheduler_task_check_period: float = Field(default=1)
+    scheduler_task_check_period: float = Field(default=0.1)
     std_name: str = Field(default="стандартная_библиотека")
     standard_lib_path_postfix: str = Field(default="/core/extend/standard_lib/modules")
     task_thread_switch_interval: float = Field(default=.00001)

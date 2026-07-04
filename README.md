@@ -1,9 +1,13 @@
 # Язык программирования: LevelScript!
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/B-E-R-K-Y-T/LawScript)
+Школа программирования LEVEL представляет язык программирования LevelScript! 
+Данный язык программирования рассчитан на детей от 8 до 16 лет
+
+[![LEVEL](https://levelschool.tilda.ws/favicon.ico) Школа LEVEL](https://levelschool.tilda.ws/)
 
 [![Хабр](https://habr.com/favicon.ico) Статья на Habr](https://habr.com/ru/articles/1025306/)
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/B-E-R-K-Y-T/LawScript)
 
 ## Сырой запуск:
 
@@ -29,10 +33,10 @@ pip install -r requirements.txt
 py lvl.py --run hello_world.lvl
 ```
 
-## Сборка:
+## Сборка(Windows):
 
 ```
-pyinstaller --onedir --hidden-import=requests --hidden-import=pygame .\lvl.py
+pyinstaller --onedir --hidden-import=requests --hidden-import=pygame --icon=assets\icon.ico --add-data "src\core\extend;src\core\extend" --add-data "src\core\docs_generate;src\core\docs_generate" --add-data "examples;dist/lvl" --add-data "hello_world.lvl;dist/lvl" .\lvl.py
 ```
 
 ### Запуск exe
@@ -43,7 +47,7 @@ lvl.exe --run hello_world.lvl
 
 Если Вы увидете такой вывод: 
 
-![img.png](docs/img_6.png)
+![img.png](docs/img_hi_world.png)
 
 Значит LevelScript работает штатно!
 
@@ -57,12 +61,12 @@ lvl.exe --run hello_world.lvl
 
 ### Философия языка
 
-Данный язык совмещает в себе две философии: Декларативную и Императивную
+LevelScript сочетает в себе интуитивно понятный синтаксис, который читается как обычный текст, и при этом обладает выразительной мощью грамматических конструкций. 
+На нём можно создавать что угодно: от простых игр и Telegram-ботов до полноценных серверов!
 
+## Пример кода
 
-## Пример императивного кода
-
-![img.png](docs/img_code_from_vs_code.png)1
+![img.png](docs/img_code_from_vs_code.png)
 
 
 ## Пример обработки ошибок
