@@ -179,15 +179,14 @@ class Preprocessor:
             match separate_line:
                 case [Tokens.include, package] if package.endswith(Tokens.star):
                     is_std_path = _is_std(package)
+                    # Удаляем * из пути и получаем директорию
+                    package = package[:-1].replace(Tokens.dot, "/")
                     package = _standard_lib_alias(package)
 
                     if package in self.imports:
                         continue
 
                     self.imports.add(package)
-
-                    # Удаляем * из пути и получаем директорию
-                    package = package[:-1].replace(Tokens.dot, "/")
 
                     dir_path = os.path.dirname(package)
 
@@ -232,6 +231,7 @@ class Preprocessor:
 
                 case [Tokens.include, module] if re.search(r'\.\S+$', module):
                     is_std_path = _is_std(module)
+                    module = module.replace(Tokens.dot, "/", module.count("."))
                     module = _standard_lib_alias(module)
 
                     if module in self.imports:
@@ -239,7 +239,6 @@ class Preprocessor:
 
                     self.imports.add(module)
 
-                    module = module.replace(".", "/", module.count("."))
                     path = module
 
                     if not is_std_path:
