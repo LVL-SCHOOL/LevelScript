@@ -136,6 +136,7 @@ class CustomAtomicType(BaseAtomicType):
     def __str__(self) -> str:
         return Tokens.spec_type
 
+
 class String(BaseAtomicType):
     def __init__(self, value: str):
         super().__init__(value)

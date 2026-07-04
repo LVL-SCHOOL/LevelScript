@@ -30,4 +30,4 @@ for file in files:
         print(f"Тест #{test_num}: Время выполнения: {st1 - st0}")
         print(f"Тест #{test_num} успешно завершен")
 
-        time.sleep(0.5)
+        time.sleep(1)
