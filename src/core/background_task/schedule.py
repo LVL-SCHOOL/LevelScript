@@ -163,6 +163,8 @@ class TaskScheduler:
         with self._lock:
             self._stop_event.set()
 
+            warn = ""
+
             while not self._queue_task.empty():
                 task = self._queue_task.get_nowait()
 
@@ -171,7 +173,10 @@ class TaskScheduler:
                 except Exception:
                     pass
                 finally:
-                    printer.print_warning(f"Задача '{task}' была остановлена до своего запуска!")
+                    warn += f"Задача '{task}' была остановлена до своего запуска!\n"
+
+            if warn:
+                printer.print_warning(warn)
 
             for worker in self.threads:
                 worker.stop()
