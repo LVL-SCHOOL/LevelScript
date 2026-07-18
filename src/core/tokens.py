@@ -30,7 +30,9 @@ class Tokens(StrEnum):
     include = "ВКЛЮЧИТЬ"
     not_ = "НЕ"
     and_ = "И"
+    and_1 = "&"
     or_ = "ИЛИ"
+    or_1 = "|"
     bool_equal = "РАВНО"
     bool_equal_1 = "РАВЕН"
     bool_equal_2 = "РАВНЫ"
@@ -40,6 +42,7 @@ class Tokens(StrEnum):
     bool_not_equal_1 = "НЕРАВЕН"
     bool_not_equal_2 = "НЕРАВНЫ"
     bool_not_equal_3 = "НЕРАВНА"
+    bool_not_equal_4 = ":="
     less = "МЕНЬШЕ"
     less_1 = "<"
     greater = "БОЛЬШЕ"
@@ -114,10 +117,12 @@ NOT_ALLOWED_TOKENS: Final[set] = set(Tokens) - {
 }
 ALIASES_MAP: Final[dict] = {
     Tokens.bool_equal: [Tokens.bool_equal_1, Tokens.bool_equal_2, Tokens.bool_equal_3, Tokens.bool_equal_4],
-    Tokens.bool_not_equal: [Tokens.bool_not_equal_1, Tokens.bool_not_equal_2, Tokens.bool_not_equal_3],
+    Tokens.bool_not_equal: [Tokens.bool_not_equal_1, Tokens.bool_not_equal_2, Tokens.bool_not_equal_3, Tokens.bool_not_equal_4],
     Tokens.defer: [Tokens.defer_1],
     Tokens.greater: [Tokens.greater_1],
     Tokens.less: [Tokens.less_1],
+    Tokens.and_: [Tokens.and_1],
+    Tokens.or_: [Tokens.or_1],
 }
 END_LINE_TOKENS: Final[tuple] = (Tokens.left_bracket, Tokens.right_bracket, Tokens.comma, Tokens.end_expr)
 MATH_OP_TOKENS: Final[set] = {
