@@ -59,8 +59,9 @@ def handle_expression(dispatch_executor, command: Expression):
     if dispatch_executor.async_mode:
         yield from executor.execute(dispatch_executor.async_mode)
     else:
-        executor.execute_with_atomic_type()
+        return executor.execute_with_atomic_type()
 
+    return SKIP
 
 def handle_assign_override_variable(dispatch_executor, command: AssignOverrideVariable):
     target_expr_executor = ExpressionExecutor(
@@ -110,6 +111,7 @@ def handle_assign_override_variable(dispatch_executor, command: AssignOverrideVa
 
     var.set_value(override_expr_result)
 
+    return SKIP
 
 def handle_assign_field(dispatch_executor, command: AssignField):
     if command.name in dispatch_executor.tree_variables.scopes[-1].variables:
@@ -126,6 +128,7 @@ def handle_assign_field(dispatch_executor, command: AssignField):
 
     dispatch_executor.tree_variables.set(var)
 
+    return SKIP
 
 def handle_print(dispatch_executor, command: Print):
     executor = ExpressionExecutor(command.expression, dispatch_executor.tree_variables, dispatch_executor.compiled)
@@ -135,6 +138,8 @@ def handle_print(dispatch_executor, command: Print):
         executed = executor.execute_with_atomic_type()
 
     printer.raw_print(executed)
+
+    return SKIP
 
 
 def handle_when(dispatch_executor, command: When):
@@ -191,6 +196,7 @@ def handle_when(dispatch_executor, command: When):
                     if not isinstance(executed, Stop):
                         return executed
 
+    return SKIP
 
 def handle_while(dispatch_executor, command: While):
     body_executor = BodyExecutor(command.body, dispatch_executor.tree_variables, dispatch_executor.compiled)
@@ -223,6 +229,7 @@ def handle_while(dispatch_executor, command: While):
             elif not isinstance(executed, Stop):
                 return executed
 
+    return SKIP
 
 def handle_loop(dispatch_executor, command: Loop):
     with VariableContextCreator(dispatch_executor.tree_variables):
@@ -282,6 +289,7 @@ def handle_loop(dispatch_executor, command: Loop):
                 elif not isinstance(executed, Stop):
                     return executed
 
+    return SKIP
 
 def handle_continue(dispatch_executor, command: Continue):
     if dispatch_executor.async_mode:
