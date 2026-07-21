@@ -13,7 +13,7 @@ from src.core.executors.expression import ExpressionExecutor
 from src.core.tokens import Tokens
 from src.core.types.atomic import Number, YIELD
 from src.core.types.base_declarative_type import BaseDeclarativeType
-from src.core.types.basetype import BaseAtomicType
+from src.core.types.basetype import BaseAtomicType, BaseType
 from src.core.types.classes import ClassDefinition, ClassField, ClassExceptionDefinition, ClassInstance
 from src.core.types.procedure import (
     Print,
@@ -45,7 +45,11 @@ if TYPE_CHECKING:
 class Stop: ...
 
 
+class Skip: ...
+
+
 STOP: Final[Stop] = Stop()
+SKIP: Final[Skip] = Skip()
 
 
 class BodyExecutor(Executor):
@@ -56,6 +60,22 @@ class BodyExecutor(Executor):
         self.catch_comprehensive_procedures()
         self.async_mode = False
         self.defers: list[Defer] = []
+        self.command_handlers = {
+            Expression: self.handle_expression,
+            AssignOverrideVariable: self.handle_assign_override_variable,
+            AssignField: self.handle_assign_field,
+            Print: self.handle_print,
+            When: self.handle_when,
+            While: self.handle_while,
+            Loop: self.handle_loop,
+            Continue: self.handle_continue,
+            Break: self.handle_break,
+            ErrorThrow: self.handle_error_throw,
+            Context: self.handle_context,
+            Return: self.handle_return,
+            BlockSync: self.handle_block_sync,
+            Defer: self.handle_defer,
+        }
 
     def catch_comprehensive_procedures(self):
         local_vars_names = {lv.name for lv in traverse_scope(self.tree_variables.scopes[-1])}
@@ -97,337 +117,349 @@ class BodyExecutor(Executor):
                 executor = ExpressionExecutor(defer.expression, self.tree_variables, self.compiled)
                 executor.execute_with_atomic_type()
 
-    def _execute(self) -> Union[Generator, Union[BaseAtomicType, Continue, Break]]:
-        for command in self.body.commands:
-            if isinstance(command, Expression):
-                executor = ExpressionExecutor(command, self.tree_variables, self.compiled)
+    def handle_expression(self, command: Expression):
+        executor = ExpressionExecutor(command, self.tree_variables, self.compiled)
 
+        if self.async_mode:
+            yield from executor.execute(self.async_mode)
+        else:
+            executor.execute_with_atomic_type()
+
+    def handle_assign_override_variable(self, command: AssignOverrideVariable):
+        target_expr_executor = ExpressionExecutor(command.target_expr, self.tree_variables, self.compiled)
+        override_expr_executor = ExpressionExecutor(command.override_expr, self.tree_variables, self.compiled)
+
+        if self.async_mode:
+            override_expr_result = yield from override_expr_executor.execute(self.async_mode)
+        else:
+            override_expr_result = override_expr_executor.execute_with_atomic_type()
+
+        if len(command.target_expr.operations) == 1:
+            target_name = command.target_expr.operations[0].name
+
+            try:
+                var = self.tree_variables.get(target_name)
+            except NameNotDefine as e:
+                raise NameNotDefine(str(e), info=command.meta_info)
+
+            var.set_value(override_expr_result)
+
+            return SKIP
+
+        if self.async_mode:
+            target = yield from target_expr_executor.execute(self.async_mode)
+        else:
+            target = target_expr_executor.execute()
+
+        if not isinstance(target, (ClassField, Variable)):
+            raise InvalidExpression(
+                f"Для выражения '{target_expr_executor.expression.raw_expr}' "
+                f"не поддерживается оператор '{Tokens.equal}'",
+                info=command.meta_info
+            )
+
+        if isinstance(target, ClassField):
+            target.value = override_expr_result
+            return SKIP
+
+        try:
+            var = self.tree_variables.get(target.name)
+        except NameNotDefine as e:
+            raise NameNotDefine(str(e), info=command.meta_info)
+
+        var.set_value(override_expr_result)
+
+    def handle_assign_field(self, command: AssignField):
+        if command.name in self.tree_variables.scopes[-1].variables:
+            raise ErrorType(f"Переменная '{command.name}' уже определена!", info=command.meta_info)
+
+        executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
+
+        if self.async_mode:
+            executed = yield from executor.async_execute(as_atomic=True)
+        else:
+            executed = executor.execute_with_atomic_type()
+
+        var = Variable(command.name, executed)
+
+        self.tree_variables.set(var)
+
+    def handle_print(self, command: Print):
+        executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
+        if self.async_mode:
+            executed = yield from executor.async_execute(as_atomic=True)
+        else:
+            executed = executor.execute_with_atomic_type()
+
+        printer.raw_print(executed)
+
+    def handle_when(self, command: When):
+        executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
+        if self.async_mode:
+            result = yield from executor.async_execute(as_atomic=True)
+        else:
+            result = executor.execute_with_atomic_type()
+
+        with VariableContextCreator(self.tree_variables):
+            if result.value:
+                body_executor = BodyExecutor(command.body, self.tree_variables, self.compiled)
                 if self.async_mode:
-                    yield from executor.execute(self.async_mode)
+                    executed = yield from body_executor.async_execute()
                 else:
-                    executor.execute_with_atomic_type()
+                    executed = body_executor.execute()
 
-            elif isinstance(command, AssignOverrideVariable):
-                target_expr_executor = ExpressionExecutor(command.target_expr, self.tree_variables, self.compiled)
-                override_expr_executor = ExpressionExecutor(command.override_expr, self.tree_variables, self.compiled)
+                if not isinstance(executed, Stop):
+                    return executed
+            else:
+                for else_when in command.else_whens:
+                    when_executor = ExpressionExecutor(else_when.expression, self.tree_variables, self.compiled)
+                    if self.async_mode:
+                        result = yield from when_executor.async_execute(as_atomic=True)
+                    else:
+                        result = when_executor.execute_with_atomic_type()
 
-                if self.async_mode:
-                    override_expr_result = yield from override_expr_executor.execute(self.async_mode)
+                    if result.value:
+                        body_executor = BodyExecutor(else_when.body, self.tree_variables, self.compiled)
+
+                        if self.async_mode:
+                            executed = yield from body_executor.async_execute()
+                        else:
+                            executed = body_executor.execute()
+
+                        if not isinstance(executed, Stop):
+                            return executed
+
+                        break
+
                 else:
-                    override_expr_result = override_expr_executor.execute_with_atomic_type()
+                    if command.else_ is not None:
+                        body_executor = BodyExecutor(command.else_.body, self.tree_variables, self.compiled)
+                        if self.async_mode:
+                            executed = yield from body_executor.async_execute()
+                        else:
+                            executed = body_executor.execute()
 
-                if len(command.target_expr.operations) == 1:
-                    target_name = command.target_expr.operations[0].name
+                        if not isinstance(executed, Stop):
+                            return executed
 
-                    try:
-                        var = self.tree_variables.get(target_name)
-                    except NameNotDefine as e:
-                        raise NameNotDefine(str(e), info=command.meta_info)
+    def handle_while(self, command: While):
+        body_executor = BodyExecutor(command.body, self.tree_variables, self.compiled)
+        executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
 
-                    var.set_value(override_expr_result)
-
-                    continue
-
-                if self.async_mode:
-                    target = yield from target_expr_executor.execute(self.async_mode)
-                else:
-                    target = target_expr_executor.execute()
-
-                if not isinstance(target, (ClassField, Variable)):
-                    raise InvalidExpression(
-                        f"Для выражения '{target_expr_executor.expression.raw_expr}' "
-                        f"не поддерживается оператор '{Tokens.equal}'",
-                        info=command.meta_info
-                    )
-
-                if isinstance(target, ClassField):
-                    target.value = override_expr_result
-                    continue
-
-                try:
-                    var = self.tree_variables.get(target.name)
-                except NameNotDefine as e:
-                    raise NameNotDefine(str(e), info=command.meta_info)
-
-                var.set_value(override_expr_result)
-
-            elif isinstance(command, AssignField):
-                if command.name in self.tree_variables.scopes[-1].variables:
-                    raise ErrorType(f"Переменная '{command.name}' уже определена!", info=command.meta_info)
-
-                executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
-
-                if self.async_mode:
-                    executed = yield from executor.async_execute(as_atomic=True)
-                else:
-                    executed = executor.execute_with_atomic_type()
-
-                var = Variable(command.name, executed)
-
-                self.tree_variables.set(var)
-
-            elif isinstance(command, Print):
-                executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
-                if self.async_mode:
-                    executed = yield from executor.async_execute(as_atomic=True)
-                else:
-                    executed = executor.execute_with_atomic_type()
-
-                printer.raw_print(executed)
-
-            elif isinstance(command, When):
-                executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
+        with VariableContextCreator(self.tree_variables):
+            while True:
                 if self.async_mode:
                     result = yield from executor.async_execute(as_atomic=True)
                 else:
                     result = executor.execute_with_atomic_type()
 
-                with VariableContextCreator(self.tree_variables):
-                    if result.value:
-                        body_executor = BodyExecutor(command.body, self.tree_variables, self.compiled)
-                        if self.async_mode:
-                            executed = yield from body_executor.async_execute()
-                        else:
-                            executed = body_executor.execute()
-
-                        if not isinstance(executed, Stop):
-                            return executed
-                    else:
-                        for else_when in command.else_whens:
-                            when_executor = ExpressionExecutor(else_when.expression, self.tree_variables, self.compiled)
-                            if self.async_mode:
-                                result = yield from when_executor.async_execute(as_atomic=True)
-                            else:
-                                result = when_executor.execute_with_atomic_type()
-
-                            if result.value:
-                                body_executor = BodyExecutor(else_when.body, self.tree_variables, self.compiled)
-
-                                if self.async_mode:
-                                    executed = yield from body_executor.async_execute()
-                                else:
-                                    executed = body_executor.execute()
-
-                                if not isinstance(executed, Stop):
-                                    return executed
-
-                                break
-
-                        else:
-                            if command.else_ is not None:
-                                body_executor = BodyExecutor(command.else_.body, self.tree_variables, self.compiled)
-                                if self.async_mode:
-                                    executed = yield from body_executor.async_execute()
-                                else:
-                                    executed = body_executor.execute()
-
-                                if not isinstance(executed, Stop):
-                                    return executed
-
-            elif isinstance(command, While):
-                body_executor = BodyExecutor(command.body, self.tree_variables, self.compiled)
-                executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
-
-                with VariableContextCreator(self.tree_variables):
-                    while True:
-                        if self.async_mode:
-                            result = yield from executor.async_execute(as_atomic=True)
-                        else:
-                            result = executor.execute_with_atomic_type()
-
-                        if self.async_mode:
-                            yield YIELD
-
-                        if not result.value:
-                            break
-
-                        if self.async_mode:
-                            executed = yield from body_executor.async_execute()
-                        else:
-                            executed = body_executor.execute()
-
-                        if isinstance(executed, Continue):
-                            continue
-
-                        elif isinstance(executed, Break):
-                            break
-
-                        elif not isinstance(executed, Stop):
-                            return executed
-
-            elif isinstance(command, Loop):
-                executor_from = ExpressionExecutor(command.expression_from, self.tree_variables, self.compiled)
-                executor_to = ExpressionExecutor(command.expression_to, self.tree_variables, self.compiled)
-
-                if self.async_mode:
-                    result_from = yield from executor_from.async_execute(as_atomic=True)
-                else:
-                    result_from = executor_from.execute_with_atomic_type()
-
-                if self.async_mode:
-                    result_to = yield from executor_to.async_execute(as_atomic=True)
-                else:
-                    result_to = executor_to.execute_with_atomic_type()
-
-                if not isinstance(result_from, Number):
-                    raise ErrorType(
-                        f"В цикле в блоке '{Tokens.from_}' должно быть число!",
-                        info=command.meta_info
-                    )
-
-                if not isinstance(result_to, Number):
-                    raise ErrorType(
-                        f"В цикле в блоке '{Tokens.to}' должно быть число!",
-                        info=command.meta_info
-                    )
-
-                with VariableContextCreator(self.tree_variables):
-                    body_executor = BodyExecutor(command.body, self.tree_variables, self.compiled)
-
-                    if not body_executor.body.commands:
-                        continue
-
-                    for var in range(result_from.value, result_to.value + 1):
-                        if self.async_mode:
-                            yield YIELD
-
-                        if command.name_loop_var is not None:
-                            self.tree_variables.set(Variable(command.name_loop_var, Number(var)))
-
-                        if self.async_mode:
-                            executed = yield from body_executor.async_execute()
-                        else:
-                            executed = body_executor.execute()
-
-                        if isinstance(executed, Continue):
-                            continue
-
-                        elif isinstance(executed, Break):
-                            break
-
-                        elif not isinstance(executed, Stop):
-                            return executed
-
-            elif isinstance(command, Continue):
                 if self.async_mode:
                     yield YIELD
 
-                return command
-
-            elif isinstance(command, Break):
-                if self.async_mode:
-                    yield YIELD
-
-                return command
-
-            elif isinstance(command, ErrorThrow):
-                executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
-                if self.async_mode:
-                    executed = yield from executor.async_execute(as_atomic=True)
-                else:
-                    executed = executor.execute_with_atomic_type()
-
-                if isinstance(executed, ClassExceptionDefinition):
-                    raise executed.base_ex(info=executor.expression.meta_info)
-                elif isinstance(executed, ClassInstance):
-                    if not is_def_err(executed.metadata.parent):
-                        raise InvalidExceptionType(type_ex=executed)
-
-                    info = executed.fields.get(executed.metadata.info_attr_name)
-
-                    raise executed.metadata.base_ex(
-                        info,
-                        info=executor.expression.meta_info,
-                    )
-                else:
-                    raise InvalidExceptionType(type_ex=executed, info=executor.expression.meta_info)
-
-            elif isinstance(command, Context):
-                with VariableContextCreator(self.tree_variables):
-                    body_executor = BodyExecutor(command.body, self.tree_variables, self.compiled)
-                    try:
-                        if self.async_mode:
-                            executed = yield from body_executor.async_execute()
-                        else:
-                            executed = body_executor.execute()
-
-                        if not isinstance(executed, Stop):
-                            return executed
-                    except BaseError as e:
-                        for handler in command.handlers:
-                            exception = self.compiled.compiled_code.get(handler.exception_class_name)
-
-                            if exception is None:
-                                continue
-
-                            if not isinstance(exception, ClassExceptionDefinition):
-                                continue
-
-                            if not isinstance(e, exception.base_ex):
-                                continue
-
-                            if handler.exception_class_name == e.exc_name:
-                                ex_inst = create_law_script_exception_class_instance(handler.exception_class_name, e)
-                            else:
-                                ex_inst = exception.create_instance(e)
-
-                            self.tree_variables.set(Variable(handler.exception_inst_name, ex_inst))
-
-                            body_executor = BodyExecutor(handler.body, self.tree_variables, self.compiled)
-                            if self.async_mode:
-                                executed = yield from body_executor.async_execute()
-
-                                if not isinstance(executed, Stop):
-                                    return executed
-                            else:
-                                executed = body_executor.execute()
-
-                                if not isinstance(executed, Stop):
-                                    return executed
-
-                            break
-                        else:
-                            raise
-
-            elif isinstance(command, Return):
-                executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
+                if not result.value:
+                    break
 
                 if self.async_mode:
-                    executed = yield from executor.async_execute(as_atomic=True)
+                    executed = yield from body_executor.async_execute()
                 else:
-                    executed = executor.execute_with_atomic_type()
+                    executed = body_executor.execute()
 
-                return executed
+                if isinstance(executed, Continue):
+                    continue
 
-            elif isinstance(command, BlockSync):
+                elif isinstance(executed, Break):
+                    break
+
+                elif not isinstance(executed, Stop):
+                    return executed
+
+    def handle_loop(self, command: Loop):
+        with VariableContextCreator(self.tree_variables):
+            executor_from = ExpressionExecutor(command.expression_from, self.tree_variables, self.compiled)
+            executor_to = ExpressionExecutor(command.expression_to, self.tree_variables, self.compiled)
+
+            if self.async_mode:
+                result_from = yield from executor_from.async_execute(as_atomic=True)
+            else:
+                result_from = executor_from.execute_with_atomic_type()
+
+            if self.async_mode:
+                result_to = yield from executor_to.async_execute(as_atomic=True)
+            else:
+                result_to = executor_to.execute_with_atomic_type()
+
+            if not isinstance(result_from, Number):
+                raise ErrorType(
+                    f"В цикле в блоке '{Tokens.from_}' должно быть число!",
+                    info=command.meta_info
+                )
+
+            if not isinstance(result_to, Number):
+                raise ErrorType(
+                    f"В цикле в блоке '{Tokens.to}' должно быть число!",
+                    info=command.meta_info
+                )
+
+            with VariableContextCreator(self.tree_variables):
                 body_executor = BodyExecutor(command.body, self.tree_variables, self.compiled)
 
-                while command.is_blocked:
+                if not body_executor.body.commands:
+                    return SKIP
+
+                for var in range(result_from.value, result_to.value + 1):
                     if self.async_mode:
                         yield YIELD
 
-                with command.lock:
-                    command.is_blocked = True
+                    if command.name_loop_var is not None:
+                        self.tree_variables.set(Variable(command.name_loop_var, Number(var)))
 
-                try:
                     if self.async_mode:
                         executed = yield from body_executor.async_execute()
                     else:
                         executed = body_executor.execute()
-                finally:
-                    with command.lock:
-                        command.is_blocked = False
+
+                    if isinstance(executed, Continue):
+                        continue
+
+                    elif isinstance(executed, Break):
+                        break
+
+                    elif not isinstance(executed, Stop):
+                        return executed
+
+    def handle_continue(self, command: Continue):
+        if self.async_mode:
+            yield YIELD
+
+        return command
+
+    def handle_break(self, command: Break):
+        if self.async_mode:
+            yield YIELD
+
+        return command
+
+    def handle_error_throw(self, command: ErrorThrow):
+        executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
+        if self.async_mode:
+            executed = yield from executor.async_execute(as_atomic=True)
+        else:
+            executed = executor.execute_with_atomic_type()
+
+        if isinstance(executed, ClassExceptionDefinition):
+            raise executed.base_ex(info=executor.expression.meta_info)
+        elif isinstance(executed, ClassInstance):
+            if not is_def_err(executed.metadata.parent):
+                raise InvalidExceptionType(type_ex=executed)
+
+            info = executed.fields.get(executed.metadata.info_attr_name)
+
+            raise executed.metadata.base_ex(
+                info,
+                info=executor.expression.meta_info,
+            )
+        else:
+            raise InvalidExceptionType(type_ex=executed, info=executor.expression.meta_info)
+
+    def handle_context(self, command: Context):
+        with VariableContextCreator(self.tree_variables):
+            body_executor = BodyExecutor(command.body, self.tree_variables, self.compiled)
+            try:
+                if self.async_mode:
+                    executed = yield from body_executor.async_execute()
+                else:
+                    executed = body_executor.execute()
 
                 if not isinstance(executed, Stop):
                     return executed
+            except BaseError as e:
+                for handler in command.handlers:
+                    exception = self.compiled.compiled_code.get(handler.exception_class_name)
 
-            elif isinstance(command, Defer):
-                self.defers.append(command)
+                    if exception is None:
+                        continue
 
+                    if not isinstance(exception, ClassExceptionDefinition):
+                        continue
+
+                    if not isinstance(e, exception.base_ex):
+                        continue
+
+                    if handler.exception_class_name == e.exc_name:
+                        ex_inst = create_law_script_exception_class_instance(handler.exception_class_name, e)
+                    else:
+                        ex_inst = exception.create_instance(e)
+
+                    self.tree_variables.set(Variable(handler.exception_inst_name, ex_inst))
+
+                    body_executor = BodyExecutor(handler.body, self.tree_variables, self.compiled)
+                    if self.async_mode:
+                        executed = yield from body_executor.async_execute()
+
+                        if not isinstance(executed, Stop):
+                            return executed
+                    else:
+                        executed = body_executor.execute()
+
+                        if not isinstance(executed, Stop):
+                            return executed
+
+                    break
+                else:
+                    raise
+
+    def handle_return(self, command: Return):
+        executor = ExpressionExecutor(command.expression, self.tree_variables, self.compiled)
+
+        if self.async_mode:
+            executed = yield from executor.async_execute(as_atomic=True)
+        else:
+            executed = executor.execute_with_atomic_type()
+
+        return executed
+
+    def handle_block_sync(self, command: BlockSync):
+        body_executor = BodyExecutor(command.body, self.tree_variables, self.compiled)
+
+        while command.is_blocked:
+            if self.async_mode:
+                yield YIELD
+
+        with command.lock:
+            command.is_blocked = True
+
+        try:
+            if self.async_mode:
+                executed = yield from body_executor.async_execute()
             else:
-                raise ErrorType(f"Неизвестная команда '{command.name}'!", info=command.meta_info)
+                executed = body_executor.execute()
+        finally:
+            with command.lock:
+                command.is_blocked = False
+
+        if not isinstance(executed, Stop):
+            return executed
+
+    def handle_defer(self, command: Defer):
+        self.defers.append(command)
+
+    def handle_default(self, command: BaseType):
+        raise ErrorType(f"Неизвестная команда '{command.name}'!", info=command.meta_info)
+
+    def _execute(self) -> Union[Generator, Union[BaseAtomicType, Continue, Break]]:
+        for command in self.body.commands:
+            result = yield from self.command_handlers.get(command.self_type, self.handle_default)(command)
+
+            if result is SKIP:
+                continue
+
+            if result is STOP:
+                return result
 
             if self.async_mode:
                 yield YIELD
+
+            if isinstance(result, BaseAtomicType):
+                return result
 
         return STOP
